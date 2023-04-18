@@ -1,0 +1,4 @@
+fal-serverless
+flask
+flask-cors
+pillow
