@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Star App</title>
+    <style>
+     body {
+       font-family: Arial, sans-serif;
+       margin: 0;
+       padding: 0;
+       background-color: #f2f2f2;
+      }
+
+     input {
+        font-size: 16px;
+        padding: 10px;
+        border-radius: 5px;
+        border: none;
+        margin-bottom: 10px;
+      }
+
+     canvas {
+       border: 1px solid black;
+       display: block;
+       margin-bottom: 10px;
+     }
+
+     button {
+       background-color: #4CAF50;
+       color: white;
+       border: none;
+       border-radius: 5px;
+       padding: 12px 24px;
+       text-align: center;
+       text-decoration: none;
+       display: inline-block;
+       font-size: 16px;
+       margin-bottom: 10px;
+       cursor: pointer;
+       transition: background 0.3s ease;
+     }
+
+     button:hover {
+       background-color: #3e8e41;
+     }
+
+     #loadingMessage {
+       font-size: 24px;
+       font-weight: bold;
+       display: none;
+     }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div>
+	<input type="file" id="inputImage" accept="image/*">
+      </div>
+      <div>
+	<input type="text" id="prompt" placeholder="Enter your prompt" style="width: 300px;">
+      </div>
+      <div>
+	<canvas id="imageCanvas"></canvas>
+      </div>
+      <div>
+	<button id="submitBtn">Submit</button>
+      </div>
+      <div>
+	<p id="loadingMessage" style="display: none;">Loading...</p>
+	<div id="imagesContainer"></div>
+      </div>
+    </div>
+
+    <script>
+     const inputImage = document.getElementById('inputImage');
+     const canvas = document.getElementById('imageCanvas');
+     const ctx = canvas.getContext('2d');
+     const star = new Image();
+     let image, circleX, circleY, imageName, imageFile;
+
+     function fileToBase64(file) {
+       return new Promise((resolve, reject) => {
+         const reader = new FileReader();
+         reader.readAsDataURL(file);
+         reader.onload = () => resolve(reader.result);
+         reader.onerror = (error) => reject(error);
+       });
+     }
+
+     inputImage.addEventListener('change', (e) => {
+       image = new Image();
+       image.src = URL.createObjectURL(e.target.files[0]);
+       imageFile = e.target.files[0];
+       imageName = e.target.files[0].name;
+       image.onload = () => {
+         canvas.width = image.width;
+         canvas.height = image.height;
+         ctx.drawImage(image, 0, 0);
+       };
+     });
+
+     canvas.addEventListener('click', (e) => {
+       const rect = canvas.getBoundingClientRect();
+       circleX = e.clientX - rect.left;
+       circleY = e.clientY - rect.top;
+
+       ctx.clearRect(0, 0, canvas.width, canvas.height);
+       ctx.drawImage(image, 0, 0);
+
+       // Draw a bright blue circle
+       ctx.beginPath();
+       ctx.arc(circleX, circleY, 10, 0, 2 * Math.PI);
+       ctx.fillStyle = 'rgb(0, 191, 255)';
+       ctx.fill();
+     });
+
+     document.getElementById('submitBtn').addEventListener('click', async () => {
+       const imageData = await fileToBase64(imageFile);
+       const promptInput = document.getElementById('prompt').value;
+       loadingMessage.style.display = 'block';
+
+       const response = await fetch('http://127.0.0.1:5000/edit', {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({
+           image: imageData,
+           x: circleX,
+           y: circleY,
+	   prompt: promptInput,
+	   filename: imageName
+         })
+       });
+
+       const imagesContainer = document.getElementById('imagesContainer');
+       imagesContainer.innerHTML = '';
+
+       loadingMessage.style.display = 'none';
+       // Handle API response
+       const res = await response.json();
+       console.log(res)
+       res.files.forEach((url) => {
+        const imgElement = document.createElement('img');
+        imgElement.src = url;
+        imgElement.style.margin = '10px';
+        imagesContainer.appendChild(imgElement);
+       });
+     });
+    </script>
+  </body>
+</html>
