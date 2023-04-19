@@ -150,12 +150,12 @@
        // Handle API response
        const res = await response.json();
        console.log(res)
-      //  res.files.forEach((url) => {
+       res.files.forEach((url) => {
           const imgElement = document.createElement('img');
-          imgElement.src = res.files[7];
+          imgElement.src = url;
           imgElement.style.margin = '10px';
           imagesContainer.appendChild(imgElement);
-      //  });
+       });
      });
     </script>
   </body>
