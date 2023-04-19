@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Star App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
      body {
        font-family: Arial, sans-serif;
        margin: 0;
-       padding: 0;
+       padding: 30px;
        background-color: #f2f2f2;
       }
 
@@ -21,7 +22,6 @@
       }
 
      canvas {
-       border: 1px solid black;
        display: block;
        margin-bottom: 10px;
      }
@@ -53,24 +53,33 @@
     </style>
   </head>
   <body>
-    <div class="container">
+
+    <div class="container p-6 mb-20 max-w-sm rounded overflow-hidden shadow-lg">
       <div>
-	<input type="file" id="inputImage" accept="image/*">
+        <input type="file" id="inputImage" class="shadow appearance-none border rounded mt-6 w-5/6 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" accept="image/*">
       </div>
+      
       <div>
-	<input type="text" id="prompt" placeholder="Enter your prompt" style="width: 300px;">
+        <input type="text" id="prompt" placeholder="Enter your prompt" class="shadow appearance-none border rounded mt-6 mb-6 w-5/6 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="text">
       </div>
+      
       <div>
-	<canvas id="imageCanvas"></canvas>
+        <button id="submitBtn"
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 border border-blue-700 rounded"> Submit</button>
       </div>
+      
       <div>
-	<button id="submitBtn">Submit</button>
-      </div>
-      <div>
-	<p id="loadingMessage" style="display: none;">Loading...</p>
-	<div id="imagesContainer"></div>
+        <p id="loadingMessage" style="display: none;">Loading...</p>
       </div>
     </div>
+
+    <div>
+      <canvas id="imageCanvas"></canvas>
+    </div>
+
+    <div id="imagesContainer"></div>
+
+
 
     <script>
      const inputImage = document.getElementById('inputImage');
@@ -129,8 +138,8 @@
            image: imageData,
            x: circleX,
            y: circleY,
-	   prompt: promptInput,
-	   filename: imageName
+          prompt: promptInput,
+          filename: imageName
          })
        });
 
@@ -141,12 +150,12 @@
        // Handle API response
        const res = await response.json();
        console.log(res)
-       res.files.forEach((url) => {
-        const imgElement = document.createElement('img');
-        imgElement.src = url;
-        imgElement.style.margin = '10px';
-        imagesContainer.appendChild(imgElement);
-       });
+      //  res.files.forEach((url) => {
+          const imgElement = document.createElement('img');
+          imgElement.src = res.files[7];
+          imgElement.style.margin = '10px';
+          imagesContainer.appendChild(imgElement);
+      //  });
      });
     </script>
   </body>
