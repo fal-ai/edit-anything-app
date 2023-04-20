@@ -66,7 +66,7 @@ def path_to_base64_zip(path):
 
 
 @isolated(requirements=requirements, machine_type="GPU", keep_alive=300, serve=True)
-def run(image_base64_str, prompt, extension, x, y):
+def replace_anything(image_base64_str, prompt, extension, x, y):
     import sys
     import os
     import io

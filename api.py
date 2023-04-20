@@ -25,9 +25,8 @@ def save_base64_zip_as_file(base64_zip_str, output_path):
 def generate_response(base64_image, prompt, extension, circle_x, circle_y):
     import requests
     import json
-    import os
 
-    url = 'https://38204337-faledit.gateway.shark.fal.ai'
+    url = os.environ['REPLACE_ANYTHING_URL']
 
     payload = {
         'image_base64_str': base64_image,
