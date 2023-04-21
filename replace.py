@@ -22,7 +22,8 @@ requirements = [
     "safetensors",
     "opencv-python",
     "matplotlib",
-    f"git+{segment_anything_repo}"
+    f"git+{segment_anything_repo}",
+    "google-cloud-storage"
 ]
 
 @cached
@@ -43,29 +44,40 @@ def download_model():
         print("Downloading SAM model.")
         os.system(f"cd /data/models && wget {MODEL_URL}")
 
-def path_to_base64_zip(path):
+@cached
+def get_gcs_bucket():
     import os
-    import zipfile
-    import base64
-    from io import BytesIO
+    import json
 
-    zip_buffer = BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        if os.path.isfile(path):
-            zf.write(path, os.path.basename(path))
-        else:
-            for root, _, files in os.walk(path):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    archive_path = os.path.relpath(file_path, start=path)
-                    zf.write(file_path, archive_path)
+    sa = os.environ.get("GCLOUD_SA_JSON")
+    loaded = json.loads(sa, strict=False)
 
-    zip_buffer.seek(0)
-    zip_data = zip_buffer.read()
-    return base64.b64encode(zip_data).decode('utf-8')
+    with open('/root/gcp_sa.json', 'w') as f:
+        json.dump(loaded, f)
+
+    from google.cloud import storage
+    try:
+        storage_client = storage.Client.from_service_account_json('/root/gcp_sa.json')
+        bucket = storage_client.get_bucket('fal_edit_anything_results')
+        return bucket
+    except Exception as e:
+        # Stringify original error so that it can be passed to the fal-serverless client
+        raise Exception(str(e))
 
 
-@isolated(requirements=requirements, machine_type="GPU", keep_alive=300, serve=True)
+def upload_to_gcs(directory_path: str, dest_blob_name: str, bucket):
+    import glob
+    import os
+    from google.cloud import storage
+    rel_paths = glob.glob(directory_path + '/**', recursive=True)
+    for local_file in rel_paths:
+        remote_path = f'{dest_blob_name}/{"/".join(local_file.split(os.sep)[1:])}'
+        if os.path.isfile(local_file):
+            blob = bucket.blob(remote_path)
+            blob.upload_from_filename(local_file)
+
+
+@isolated(requirements=requirements, machine_type="GPU", serve=True)
 def replace_anything(image_base64_str, prompt, extension, x, y):
     import sys
     import os
@@ -105,12 +117,18 @@ def replace_anything(image_base64_str, prompt, extension, x, y):
 
     os.system(command)
 
-    print('Packaging result')
-    result = path_to_base64_zip(f'/data/edit-results/{image_id}')
-
-    print('Cleaning up')
-    os.system(f'rm ./{input_img_name}')
-    os.system(f'rm -rf /data/edit-results/{image_id}')
-
     print('Done')
-    return result
+
+    print("Upload results to GCS")
+    bucket = get_bucket()
+
+    results_dir = f'/data/edit-results/{image_id}'
+
+    file_names = [f for f in os.listdir(result_dir) if os.path.isfile(os.path.join(result_dir, f))]
+
+    try:
+        upload_to_gcs(results_dir, image_id, bucket)
+    except Exception as e:
+        raise Exception(str(e))
+
+    return image_id, file_names
