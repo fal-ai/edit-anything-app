@@ -1,6 +1,10 @@
 # edit anything with fal serverless
 
 ## Getting started
+### Prerequisites
+- Python >=3.8
+- Node.js >= 18.0
+
 ### Install `fal-serverless` and authenticate
 ```bash
 pip install fal-serverless
@@ -9,6 +13,11 @@ After installation is complete, you can authenticate:
 
 ```bash
 fal-serverless auth login
+```
+
+### Install next.js dependencies
+```bash
+npm install
 ```
 
 ### Generate authentication keys and set them as environment variables
@@ -40,10 +49,10 @@ And set the provided URL as an environment variable:
 export REPLACE_ANYTHING_URL="your-web-endpoint-url"
 ```
 
-### Start the local flask server
+### Start the local dev server
 
 ```bash
-python api.py
+npm run dev
 ```
 
 ## TODO:
