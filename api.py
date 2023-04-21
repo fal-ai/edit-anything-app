@@ -64,22 +64,20 @@ def handle_request():
     base64_image = re.sub('^data:image/.+;base64,', '', image_data)
 
     # Process and store the data as needed
+    try:
+        result = generate_response(base64_image, prompt, extension, circle_x, circle_y)
+    except Exception as e:
+        print(e)
+        return jsonify({"status": "error", "message": str(e)})
 
-    result = generate_response(base64_image, prompt, extension, circle_x, circle_y)
+    result_id = result.get('result', [None])[0]
+    if result_id:
+        BASE_URL = "https://storage.googleapis.com/fal_edit_anything_results"
+        filenames = [f"replaced_with_mask_{i}.png" for i in range(3)]
+        files = [f"{BASE_URL}/{result_id}/{filename}" for filename in filenames]
 
-    result_id = str(uuid.uuid4())
-
-    save_base64_zip_as_file(result["result"], f"{result_id}.zip")
-    result_dir = f'results/{result_id}'
-    with zipfile.ZipFile(f'{result_id}.zip', 'r') as zip_ref:
-        zip_ref.extractall(result_dir)
-
-    file_names = [f for f in os.listdir(result_dir) if os.path.isfile(os.path.join(result_dir, f))]
-    file_names = [f"http://127.0.0.1:5000/results/{result_id}/{f}" for f in file_names]
-
-    os.system(f"rm {result_id}.zip")
-
-    return jsonify({"status": "success", "files": file_names})
+        return jsonify({"status": "success", "files": files})
+    return jsonify({"status": "error"})
 
 
 @app.route('/results/<path:path>')
