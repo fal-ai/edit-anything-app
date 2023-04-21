@@ -22,9 +22,18 @@ Set the generated key ID and secret as environment variables:
 export FAL_KEY_ID="your-key-id" FAL_KEY_SECRET="your-key-secret"
 ```
 
-### Deploy the `replace_anything` function as a web endpoint
+### Set Google Cloud Service Account secret
+
+The web endpoint uses Google Cloud Storage for saving the inference results. So it needs access to a service account json. You can provide it to fal-serverless like this:
+
 ```bash
-fal-serverless function serve replace.py replace_anything --alias replace
+fal-serverless secrets set GCLOUD_SA_JSON "$(cat path-to-my-service-account.json)"
+```
+
+### Deploy the `replace_anything` function as a web endpoint
+
+```bash
+fal-serverless function serve replace.py run_replace --alias replace
 ```
 And set the provided URL as an environment variable:
 ```bash
@@ -34,7 +43,7 @@ export REPLACE_ANYTHING_URL="your-web-endpoint-url"
 ### Start the local flask server
 
 ```bash
-python run
+python api.py
 ```
 
 ## TODO:
