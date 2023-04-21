@@ -69,16 +69,14 @@ def upload_to_gcs(directory_path: str, dest_blob_name: str, bucket):
     import glob
     import os
     from google.cloud import storage
-    rel_paths = glob.glob(directory_path + '/**', recursive=True)
-    for local_file in rel_paths:
-        remote_path = f'{dest_blob_name}/{"/".join(local_file.split(os.sep)[1:])}'
-        if os.path.isfile(local_file):
-            blob = bucket.blob(remote_path)
-            blob.upload_from_filename(local_file)
+    for f in os.listdir(directory_path):
+        remote_path = f'{dest_blob_name}/{f}'
+        blob = bucket.blob(remote_path)
+        blob.upload_from_filename(os.path.join(directory_path, f))
 
 
 @isolated(requirements=requirements, machine_type="GPU", serve=True)
-def replace_anything(image_base64_str, prompt, extension, x, y):
+def run_replace(image_base64_str, prompt, extension, x, y):
     import sys
     import os
     import io
@@ -120,14 +118,14 @@ def replace_anything(image_base64_str, prompt, extension, x, y):
     print('Done')
 
     print("Upload results to GCS")
-    bucket = get_bucket()
+    bucket = get_gcs_bucket()
 
-    results_dir = f'/data/edit-results/{image_id}'
+    result_dir = f'/data/edit-results/{image_id}'
 
     file_names = [f for f in os.listdir(result_dir) if os.path.isfile(os.path.join(result_dir, f))]
 
     try:
-        upload_to_gcs(results_dir, image_id, bucket)
+        upload_to_gcs(result_dir, image_id, bucket)
     except Exception as e:
         raise Exception(str(e))
 
