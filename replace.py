@@ -132,7 +132,7 @@ def run_replace(image_base64_str, prompt, extension, x, y):
     out_dir = Path("/data/edit-results") / img_stem
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    mask = masks[0]
+    mask = masks[1]
 
     mask_p = out_dir / f"mask_{0}.png"
     img_points_p = out_dir / f"with_points.png"
