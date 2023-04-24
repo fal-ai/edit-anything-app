@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "prettier": "prettier --write \"./**/*.{js,jsx,json,ts,tsx}\""
   },
   "dependencies": {
     "@types/form-data": "^2.5.0",
@@ -28,5 +29,8 @@
     "typescript": "5.0.4",
     "uuid": "^9.0.0",
     "yauzl": "^2.10.0"
+  },
+  "devDependencies": {
+    "prettier": "^2.8.8"
   }
 }
