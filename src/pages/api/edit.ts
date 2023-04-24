@@ -56,8 +56,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	const result_id = result['result'][0]
 
 	const BASE_URL:string = "https://storage.googleapis.com/fal_edit_anything_results";
-	const filenames:string[] = Array.from({ length: 3 }, (_, i) => `replaced_with_mask_${i}.png`);
-	const files:string[] = filenames.map(filename => `${BASE_URL}/${result_id}/${filename}`);
+
+	const files:string[] = [
+	    `${BASE_URL}/${result_id}/replaced_with_mask_0.png`,
+	    `${BASE_URL}/${result_id}/with_mask_0.png`
+	]
 
 	console.log("done")
 	res.status(200).json({ status: 'success', files: files });
