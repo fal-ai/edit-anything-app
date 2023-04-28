@@ -1,88 +1,56 @@
-import { useState, useRef, useEffect } from "react";
+import { InformationCircleIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import axios from "axios";
+import Head from "next/head";
+import { useState } from "react";
+
+import Card from "@/components/Card";
+import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
 
 const Home = () => {
-  const [image, setImage] = useState<string | null>(null);
-  const [x, setX] = useState(0);
-  const [y, setY] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageSize, setImageSize] = useState({ height: 0, width: 0 });
+  const [position, setPosition] = useState<ImageSpotPosition | undefined>(
+    undefined
+  );
   const [prompt, setPrompt] = useState("");
   const [filename, setFilename] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  useEffect(() => {
-    if (image) {
-      drawImage();
-    }
-  }, [image]);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFilename(e.target.files[0].name);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target) {
-          setImage(event.target.result as string);
-        }
+      const file = e.target.files[0];
+      const imageUrl = URL.createObjectURL(file);
+
+      const image = new Image();
+      image.src = imageUrl;
+      image.onload = () => {
+        setFilename(file.name);
+        setImageSize({ width: image.width, height: image.height });
+        setSelectedImage(imageUrl);
       };
-      reader.readAsDataURL(e.target.files[0]);
     }
   };
 
-  const drawImage = () => {
-    if (canvasRef.current && image) {
-      const ctx = canvasRef.current.getContext("2d");
-      if (ctx) {
-        const img = new Image();
-        img.src = image;
-        img.onload = () => {
-          canvasRef.current!.width = img.width;
-          canvasRef.current!.height = img.height;
-          ctx.drawImage(img, 0, 0);
-        };
-      }
-    }
+  const handleImageClick = (position: ImageSpotPosition) => {
+    setPosition(position);
   };
 
-  const drawDot = (x: number, y: number) => {
-    const ctx = canvasRef.current!.getContext("2d")!;
-    ctx.beginPath();
-    ctx.arc(x, y, 5, 0, 2 * Math.PI);
-    ctx.fillStyle = "blue";
-    ctx.fill();
-  };
-
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setX(x);
-    setY(y);
-
-    const ctx = canvasRef.current!.getContext("2d")!;
-    const img = new Image();
-    img.src = image!;
-
-    ctx.drawImage(img, 0, 0);
-    drawDot(x, y);
-  };
+  const wait = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setIsLoading(true);
 
-    if (!image) {
-      alert("Please upload an image.");
-      return;
-    }
+    await wait(25000);
 
     try {
-      const response = await axios.post("/api/edit", {
-        image,
-        x,
-        y,
+      const response = await axios.post(e.currentTarget.action, {
+        selectedImage,
+        x: position?.x ?? 0,
+        y: position?.y ?? 0,
         prompt,
         filename,
       });
@@ -94,68 +62,116 @@ const Home = () => {
     }
   };
 
+  const hasPrompt = prompt && prompt.trim().length > 0;
+  const canSubmit = !isLoading && selectedImage && hasPrompt && position;
+
   return (
-    <div
-      className={`container mx-auto px-4 py-8 ${
-        isLoading ? "opacity-50 pointer-events-none" : ""
-      }`}
-    >
-      <h1 className="text-4xl font-bold mb-8">Edit Image</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-lg font-medium">Image:</label>
-          <input type="file" onChange={handleImageUpload} className="mt-1" />
+    <main className="min-h-screen py-16">
+      <Head>
+        <title>Edit Anything | fal-serverless</title>
+      </Head>
+      <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+        <div className="md:col-span-1">
+          <Card title="Edit image">
+            <form
+              action="/api/edit"
+              onSubmit={handleSubmit}
+              aria-disabled={isLoading}
+            >
+              <div>
+                <label className="label" htmlFor="file_input">
+                  <span className="label-text">Choose a starting image</span>
+                </label>
+                <input
+                  id="file_input"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  aria-describedby="file_input_help"
+                  onChange={handleImageSelected}
+                  className="file-input file-input-bordered w-full placeholder-gray-500"
+                  disabled={isLoading}
+                />
+                <p
+                  id="file_input_help"
+                  className="text-xs prose prose-slate opacity-80 mt-2"
+                >
+                  Accepted formats: .jpg, .png (max size: 4MB)
+                </p>
+              </div>
+              <div>
+                <label htmlFor="prompt_input" className="label">
+                  <span className="label-text">Prompt</span>
+                </label>
+                <input
+                  id="prompt_input"
+                  type="text"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Something creative, e.g. 'a bus on the moon'"
+                  className="input input-bordered w-full placeholder-gray-500"
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="card-actions justify-end mt-8">
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={!canSubmit}
+                >
+                  Edit it!
+                </button>
+              </div>
+            </form>
+          </Card>
         </div>
-        <div>
-          <label className="block text-lg font-medium">Prompt:</label>
-          <input
-            type="text"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="mt-1 w-full p-2 border-2 border-gray-300 rounded-md"
-          />
-        </div>
-        <button
-          type="submit"
-          className="bg-blue-600 text-white font-semibold p-3 rounded-md hover:bg-blue-700 transition-colors duration-200"
-        >
-          Submit
-        </button>
-      </form>
-      {image && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">
-            Click on the image to place the blue dot
-          </h2>
-          <canvas
-            ref={canvasRef}
-            onClick={handleCanvasClick}
-            className="border-2 border-gray-300 rounded-md"
-          ></canvas>
-        </div>
-      )}
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Generated Images</h2>
-        <div className="grid grid-cols-2 gap-4">
-          {imageUrls.map((url, index) => (
-            <img
-              key={index}
-              src={url}
-              alt={`Generated Image ${index + 1}`}
-              className="rounded-md shadow-md"
-            />
-          ))}
+        <div className="md:col-span-2">
+          <Card title="Image">
+            {selectedImage && (
+              <>
+                <ImageSpot
+                  imageUrl={selectedImage}
+                  height={imageSize.height}
+                  width={imageSize.width}
+                  onClick={handleImageClick}
+                />
+                <p className="font-light text-sm mb-0 opacity-50">
+                  Hint: click to place a point of reference on a
+                  point-of-interest to define the mask
+                </p>
+              </>
+            )}
+            {!selectedImage && (
+              <div className="mx-auto py-16">
+                <PhotoIcon className="h-64 w-64 opacity-10" />
+              </div>
+            )}
+          </Card>
         </div>
       </div>
+      <div className="container mx-auto pt-8 w-full">
+        <Card title="Generated images">
+          {imageUrls.length === 0 && (
+            <div className="text-center font-light prose prose-slate opacity-60 max-w-full my-8">
+              <InformationCircleIcon className="h-6 w-6 opacity-80 inline-block me-4" />
+              Nothing to see here just yet
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            {imageUrls.map((url, index) => (
+              <img key={index} src={url} alt={`Generated Image ${index + 1}`} />
+            ))}
+          </div>
+        </Card>
+      </div>
       {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-8 rounded-md shadow-md">
-            <h3 className="text-xl font-semibold mb-4">Loading</h3>
-            <p>Please wait...</p>
+        <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="alert max-w-md shadow-lg">
+            <div className="animate-spin inline-flex rounded-full h-8 w-8 border-t-2 border-b-2 border-secondary"></div>
+            <p className="ms-2">Hold on tight, we're working on it</p>
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 };
 
