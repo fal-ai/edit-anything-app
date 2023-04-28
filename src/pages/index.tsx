@@ -24,11 +24,15 @@ const Home = () => {
 
       const image = new Image();
       image.src = imageUrl;
+      const reader = new FileReader();
       image.onload = () => {
         setFilename(file.name);
         setImageSize({ width: image.width, height: image.height });
-        setSelectedImage(imageUrl);
       };
+      reader.onloadend = () => {
+        setSelectedImage(reader.result?.toString() ?? "");
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -36,18 +40,12 @@ const Home = () => {
     setPosition(position);
   };
 
-  const wait = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     setIsLoading(true);
 
-    await wait(25000);
-
     try {
-      const response = await axios.post(e.currentTarget.action, {
+      const response = await axios.post("/api/edit", {
         selectedImage,
         x: position?.x ?? 0,
         y: position?.y ?? 0,
@@ -73,11 +71,7 @@ const Home = () => {
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
         <div className="md:col-span-1">
           <Card title="Edit image">
-            <form
-              action="/api/edit"
-              onSubmit={handleSubmit}
-              aria-disabled={isLoading}
-            >
+            <form onSubmit={handleSubmit}>
               <div>
                 <label className="label" htmlFor="file_input">
                   <span className="label-text">Choose a starting image</span>
@@ -167,7 +161,7 @@ const Home = () => {
         <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
           <div className="alert max-w-md shadow-lg">
             <div className="animate-spin inline-flex rounded-full h-8 w-8 border-t-2 border-b-2 border-secondary"></div>
-            <p className="ms-2">Hold on tight, we're working on it</p>
+            <p className="ms-2">Hold on tight, we&apos;re working on it</p>
           </div>
         </div>
       )}
