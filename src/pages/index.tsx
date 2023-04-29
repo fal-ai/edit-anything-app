@@ -1,5 +1,4 @@
 import { InformationCircleIcon, PhotoIcon } from "@heroicons/react/24/outline";
-import axios from "axios";
 import Head from "next/head";
 import { useState } from "react";
 
@@ -45,16 +44,28 @@ const Home = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("/api/edit", {
-        selectedImage,
-        x: position?.x ?? 0,
-        y: position?.y ?? 0,
-        prompt,
-        filename,
+      const formData = new FormData(e.currentTarget);
+      formData.append(
+        "data",
+        JSON.stringify({
+          prompt,
+          x: position?.x,
+          y: position?.y,
+        })
+      );
+      const response = await fetch("/api/edit", {
+        method: "POST",
+        body: formData,
       });
-      setImageUrls(response.data.files);
+
+      if (response.ok) {
+        const data = await response.json();
+        setImageUrls(data.files);
+      } else {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
     } catch (error) {
-      console.error("Error submitting the form", error);
+      console.error("Error submitting the form:", error);
     } finally {
       setIsLoading(false);
     }
@@ -79,6 +90,7 @@ const Home = () => {
                 <input
                   id="file_input"
                   type="file"
+                  name="image"
                   accept="image/jpeg,image/jpg,image/png"
                   aria-describedby="file_input_help"
                   onChange={handleImageSelected}
@@ -99,6 +111,7 @@ const Home = () => {
                 <input
                   id="prompt_input"
                   type="text"
+                  name="prompt"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="Something creative, e.g. 'a bus on the moon'"
