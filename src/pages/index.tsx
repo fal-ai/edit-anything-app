@@ -1,9 +1,17 @@
+import * as fal from "@fal-ai/serverless-client";
+import { withNextProxy } from "@fal-ai/serverless-nextjs";
 import { InformationCircleIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import Head from "next/head";
 import { useState } from "react";
 
 import Card from "@/components/Card";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
+
+fal.config({
+  userId: "github|319413",
+  host: "gateway.shark.fal.ai",
+  requestMiddleware: withNextProxy(),
+});
 
 const Home = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -41,29 +49,23 @@ const Home = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!selectedImage || !position || !prompt) {
+      return;
+    }
     setIsLoading(true);
 
     try {
-      const formData = new FormData(e.currentTarget);
-      formData.append(
-        "data",
-        JSON.stringify({
+      const { result }: any = await fal.run("run_replace", {
+        input: {
+          image_base64_str: selectedImage,
+          extension: filename.split(".").pop(),
           prompt,
-          x: position?.x,
-          y: position?.y,
-        })
-      );
-      const response = await fetch("/api/edit", {
-        method: "POST",
-        body: formData,
+          x: position.x,
+          y: position.y,
+        },
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setImageUrls(data.files);
-      } else {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
+      console.log("Result:", result);
+      setImageUrls(result.files);
     } catch (error) {
       console.error("Error submitting the form:", error);
     } finally {

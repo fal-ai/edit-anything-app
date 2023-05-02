@@ -174,4 +174,7 @@ def run_replace(image_base64_str, prompt, extension, x, y):
     except Exception as e:
         raise Exception(str(e))
 
-    return image_id, file_names
+    return {
+        'id': image_id,
+        'file_names': file_names
+    }

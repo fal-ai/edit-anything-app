@@ -10,6 +10,8 @@
     "prettier": "prettier --write \"./**/*.{js,jsx,json,ts,tsx}\""
   },
   "dependencies": {
+    "@fal-ai/serverless-client": "file:../serverless-js/dist/libs/client",
+    "@fal-ai/serverless-nextjs": "file:../serverless-js/dist/libs/nextjs",
     "@heroicons/react": "^2.0.17",
     "@types/form-data": "^2.5.0",
     "@types/node": "^18.15.12",
