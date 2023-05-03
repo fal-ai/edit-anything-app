@@ -1,78 +1,128 @@
-import { InformationCircleIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import Head from "next/head";
+import NextImage from "next/image";
 import { useState } from "react";
 
 import Card from "@/components/Card";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
+import Steps, { StepName } from "@/components/Steps";
+import EmptyMessage from "@/components/EmptyMessage";
+import ImageSelector, { ImageFile } from "@/components/ImageSelector";
 
 const Home = () => {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [imageSize, setImageSize] = useState({ height: 0, width: 0 });
-  const [position, setPosition] = useState<ImageSpotPosition | undefined>(
-    undefined
-  );
+  const [step, setStep] = useState<StepName>(StepName.ChooseImage);
+  const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
+  const [position, setPosition] = useState<ImageSpotPosition | null>(null);
+  const [imageId, setImageId] = useState<string | null>(null);
+  const [masks, setMasks] = useState<string[]>([]);
+  const [selectedMask, setSelectedMask] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
-  const [filename, setFilename] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setLoading] = useState(false);
 
-  const handleImageSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const imageUrl = URL.createObjectURL(file);
+  const reset = () => {
+    setStep(StepName.ChooseImage);
+    setSelectedImage(null);
+    setPosition(null);
+    setMasks([]);
+    setSelectedMask(null);
+    setPrompt("");
+    setImageUrls([]);
+    setLoading(false);
+  };
 
-      const image = new Image();
-      image.src = imageUrl;
-      const reader = new FileReader();
-      image.onload = () => {
-        setFilename(file.name);
-        setImageSize({ width: image.width, height: image.height });
-      };
-      reader.onloadend = () => {
-        setSelectedImage(reader.result?.toString() ?? "");
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageSelected = (image: ImageFile) => {
+    setSelectedImage(image);
+    setStep(StepName.SetMaskPoint);
   };
 
   const handleImageClick = (position: ImageSpotPosition) => {
     setPosition(position);
+    setStep(StepName.GenerateMask);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-
+  const generateMasks = async () => {
+    setLoading(true);
     try {
-      const formData = new FormData(e.currentTarget);
-      formData.append(
-        "data",
-        JSON.stringify({
-          prompt,
-          x: position?.x,
-          y: position?.y,
-        })
-      );
-      const response = await fetch("/api/edit", {
+      if (!selectedImage || !position) {
+        // TODO error message?
+        return;
+      }
+      const response = await fetch("/api/masks", {
         method: "POST",
-        body: formData,
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          image: selectedImage.data,
+          extension: "." + selectedImage.filename.split(".").pop(),
+          x: position.x,
+          y: position.y,
+        }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setImageUrls(data.files);
-      } else {
+      if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`);
       }
-    } catch (error) {
-      console.error("Error submitting the form:", error);
+      const data = await response.json();
+      setMasks(data.files);
+      setImageId(data.image_id);
+      setStep(StepName.ChooseMask);
+    } catch (e) {
+      // TODO set error state
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  const handleMaskSelected = (mask: string) => {
+    return () => {
+      setSelectedMask(mask);
+      setStep(StepName.DefinePrompt);
+    };
+  };
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      if (!selectedImage || !position || !selectedMask) {
+        // TODO set error state / message
+        return;
+      }
+      // extract the maskId from the mask url using the with_mask_(\d+) pattern
+      const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
+      if (!maskId) {
+        // TODO set error state / message
+        return;
+      }
+      const response = await fetch("/api/edit", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          image_id: imageId,
+          extension: "." + selectedImage.filename.split(".").pop(),
+          mask_id: maskId,
+          prompt,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const data = await response.json();
+      setImageUrls(data.files);
+      setStep(StepName.Generate);
+    } catch (e) {
+      // TODO set error state
+    } finally {
+      setLoading(false);
     }
   };
 
   const hasPrompt = prompt && prompt.trim().length > 0;
-  const canSubmit = !isLoading && selectedImage && hasPrompt && position;
 
   return (
     <main className="min-h-screen py-16">
@@ -80,101 +130,144 @@ const Home = () => {
         <title>Edit Anything | fal-serverless</title>
       </Head>
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-        <div className="md:col-span-1">
-          <Card title="Edit image">
-            <form onSubmit={handleSubmit}>
-              <div>
-                <label className="label" htmlFor="file_input">
-                  <span className="label-text">Choose a starting image</span>
-                </label>
-                <input
-                  id="file_input"
-                  type="file"
-                  name="image"
-                  accept="image/jpeg,image/jpg,image/png"
-                  aria-describedby="file_input_help"
-                  onChange={handleImageSelected}
-                  className="file-input file-input-bordered w-full placeholder-gray-500"
-                  disabled={isLoading}
-                />
-                <p
-                  id="file_input_help"
-                  className="text-xs prose prose-slate opacity-80 mt-2"
-                >
-                  Accepted formats: .jpg, .png (max size: 4MB)
-                </p>
-              </div>
-              <div>
-                <label htmlFor="prompt_input" className="label">
-                  <span className="label-text">Prompt</span>
-                </label>
-                <input
-                  id="prompt_input"
-                  type="text"
-                  name="prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Something creative, e.g. 'a bus on the moon'"
-                  className="input input-bordered w-full placeholder-gray-500"
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="card-actions justify-end mt-8">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={!canSubmit}
-                >
-                  Edit it!
-                </button>
-              </div>
-            </form>
+        <div className="md:col-span-3">
+          <Card>
+            <Steps currentStep={step} />
           </Card>
         </div>
         <div className="md:col-span-2">
-          <Card title="Image">
+          <Card title="Source image">
+            {!selectedImage && (
+              <ImageSelector
+                onImageSelect={handleImageSelected}
+                disabled={isLoading}
+              />
+            )}
             {selectedImage && (
               <>
+                <div className="flex justify-between my-4">
+                  <span className="font-light mb-0 inline-block opacity-70">
+                    <strong>Hint:</strong> click on the image to set the mask
+                    reference point
+                  </span>
+                  <button
+                    className="btn btn-outline btn-secondary self-end"
+                    onClick={reset}
+                    disabled={isLoading}
+                  >
+                    Reset
+                  </button>
+                </div>
                 <ImageSpot
-                  imageUrl={selectedImage}
-                  height={imageSize.height}
-                  width={imageSize.width}
+                  imageUrl={selectedImage.data}
+                  height={selectedImage.size.height}
+                  width={selectedImage.size.width}
                   onClick={handleImageClick}
                 />
-                <p className="font-light text-sm mb-0 opacity-50">
-                  Hint: click to place a point of reference on a
-                  point-of-interest to define the mask
-                </p>
               </>
             )}
-            {!selectedImage && (
-              <div className="mx-auto py-16">
-                <PhotoIcon className="h-64 w-64 opacity-10" />
+          </Card>
+        </div>
+        <div className="md:col-span-1">
+          <Card title="Masks" classNames="min-h-full">
+            {masks.length === 0 && (
+              <div className="mt-12">
+                <EmptyMessage message="No masks generated yet" />
+                <div className="flex flex-col items-center">
+                  <button
+                    className="btn btn-primary"
+                    disabled={isLoading || !selectedImage || !position}
+                    onClick={generateMasks}
+                  >
+                    Generate masks
+                  </button>
+                </div>
+              </div>
+            )}
+            {masks.length > 0 && (
+              <div className="grid grid-cols-1 space-y-2">
+                {masks.map((mask, index) => (
+                  <div
+                    key={index}
+                    className={`border-2 p-2 dark:border-base-100 ${
+                      selectedMask === mask
+                        ? "border-secondary dark:border-secondary"
+                        : ""
+                    }`}
+                    onClick={handleMaskSelected(mask)}
+                  >
+                    <NextImage
+                      src={mask}
+                      alt={`Mask ${index + 1}`}
+                      width={0}
+                      height={0}
+                      sizes="100vw"
+                      style={{ width: "100%", height: "auto" }}
+                      className="my-0"
+                    />
+                  </div>
+                ))}
               </div>
             )}
           </Card>
         </div>
       </div>
       <div className="container mx-auto pt-8 w-full">
-        <Card title="Generated images">
+        <Card>
+          <div className="flex space-x-6">
+            <div className="form-control w-3/5 max-w-full">
+              <label className="input-group">
+                <span>
+                  <code className="opacity-40">/imagine</code>
+                </span>
+                <input
+                  id="prompt_input"
+                  type="text"
+                  name="prompt"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="something creative, like 'a bus on the moon'"
+                  className="input placeholder-gray-500 w-full"
+                  disabled={isLoading}
+                />
+              </label>
+            </div>
+            <button
+              className="btn btn-primary"
+              disabled={isLoading || !selectedMask || !hasPrompt}
+              onClick={handleGenerate}
+            >
+              Generate
+            </button>
+          </div>
           {imageUrls.length === 0 && (
-            <div className="text-center font-light prose prose-slate opacity-60 max-w-full my-8">
-              <InformationCircleIcon className="h-6 w-6 opacity-80 inline-block me-4" />
-              Nothing to see here just yet
+            <div className="my-12">
+              <EmptyMessage message="Nothing to see just yet" />
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 mt-6">
             {imageUrls.map((url, index) => (
-              <img key={index} src={url} alt={`Generated Image ${index + 1}`} />
+              <NextImage
+                key={index}
+                src={url}
+                alt={`Generated Image ${index + 1}`}
+                width={0}
+                height={0}
+                sizes="100vw"
+                style={{ width: "100%", height: "auto" }}
+                className="my-0"
+              />
             ))}
           </div>
         </Card>
       </div>
       {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="alert max-w-md shadow-lg">
-            <div className="animate-spin inline-flex rounded-full h-8 w-8 border-t-2 border-b-2 border-secondary"></div>
-            <p className="ms-2">Hold on tight, we&apos;re working on it</p>
+        <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="alert max-w-md shadow-lg p-12">
+            <div className="flex-col items-center pt-6 w-full">
+              <progress className="progress progress-primary w-max-[60%]"></progress>
+              <p className="my-4">Hold on tight, we&apos;re working on it!</p>
+            </div>
           </div>
         </div>
       )}

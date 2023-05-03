@@ -2,7 +2,7 @@ import { PropsWithChildren } from "react";
 
 export interface CardProps {
   classNames?: string;
-  title: string;
+  title?: string;
 }
 
 export default function Card(props: PropsWithChildren<CardProps>) {
@@ -13,9 +13,11 @@ export default function Card(props: PropsWithChildren<CardProps>) {
       }`}
     >
       <div className="card-body">
-        <h3 className="card-title font-light uppercase opacity-60 mt-0">
-          {props.title}
-        </h3>
+        {props.title && (
+          <h3 className="card-title font-light uppercase opacity-60 mt-0">
+            {props.title}
+          </h3>
+        )}
         {props.children}
       </div>
     </div>

@@ -1,0 +1,3 @@
+fal-serverless
+flask
+flask-cors

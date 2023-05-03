@@ -64,7 +64,7 @@ export default function ImageSpot(props: ImageSpotProps) {
   }, [position]);
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full justify-center items-center">
       <NextImage
         ref={imageRef}
         onClick={handleImageClick}
