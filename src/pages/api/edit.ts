@@ -1,5 +1,5 @@
 import fetch from "cross-fetch";
-import type { NextApiHandler, PageConfig } from "next";
+import type { NextApiHandler } from "next";
 
 const EDIT_FUNCTION_URL = process.env.EDIT_FUNCTION_URL;
 
@@ -28,13 +28,5 @@ const handler: NextApiHandler = async (request, response) => {
   const json = await result.json();
   response.json(json);
 };
-
-// export const config: PageConfig = {
-//   api: {
-//     bodyParser: {
-//       sizeLimit: "10mb",
-//     },
-//   },
-// };
 
 export default handler;

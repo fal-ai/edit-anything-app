@@ -189,9 +189,7 @@ const Home = () => {
                   <div
                     key={index}
                     className={`border-2 p-2 ${
-                      selectedMask === mask
-                        ? "border-secondary"
-                        : ""
+                      selectedMask === mask ? "border-secondary" : ""
                     }`}
                     onClick={handleMaskSelected(mask)}
                   >
