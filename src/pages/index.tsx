@@ -84,8 +84,14 @@ const Home = () => {
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      if (!selectedImage || !position) {
-        // TODO error message?
+      if (!selectedImage || !position || !selectedMask) {
+        // TODO set error state / message
+        return;
+      }
+      // extract the maskId from the mask url using the with_mask_(\d+) pattern
+      const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
+      if (!maskId) {
+        // TODO set error state / message
         return;
       }
       const response = await fetch("/api/edit", {
@@ -97,7 +103,7 @@ const Home = () => {
         body: JSON.stringify({
           image_id: imageId,
           extension: "." + selectedImage.filename.split(".").pop(),
-          mask_id: selectedMask,
+          mask_id: maskId,
           prompt,
         }),
       });
@@ -183,11 +189,11 @@ const Home = () => {
                   <div
                     key={index}
                     className={`border-2 p-2 ${
-                      selectedMask === index.toString()
+                      selectedMask === mask
                         ? "border-secondary"
                         : ""
                     }`}
-                    onClick={handleMaskSelected(index.toString())}
+                    onClick={handleMaskSelected(mask)}
                   >
                     <NextImage
                       src={mask}
