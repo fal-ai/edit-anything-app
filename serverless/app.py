@@ -1,15 +1,17 @@
 from fal_serverless import isolated, cached
-import os
-import base64
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-import uuid
-import zipfile
-import re
-import time
 
-app = Flask(__name__)
-CORS(app)
+import base64
+import os
+import re
+import uuid
+
+# from flask import Flask, request, jsonify, send_from_directory
+# from flask_cors import CORS
+# import zipfile
+# import time
+
+# app = Flask(__name__)
+# CORS(app)
 
 REPO_PATH = "/data/repos/inpaint-anyting"
 
@@ -89,8 +91,8 @@ def upload_to_gcs(directory_path: str, dest_blob_name: str, bucket):
         blob.upload_from_filename(os.path.join(directory_path, f))
 
 
-@isolated(requirements=requirements, machine_type="GPU-T4")
-def make_masks(image_base64_str, extension, x, y):
+@isolated(requirements=requirements, machine_type="GPU-T4", serve=True)
+def make_masks(image: str, extension: str, x: int, y: int):
     import sys
     import numpy as np
     import io
@@ -98,7 +100,7 @@ def make_masks(image_base64_str, extension, x, y):
     from pathlib import Path
     from matplotlib import pyplot as plt
 
-    image_base64_str = re.sub('^data:image/.+;base64,', '', image_base64_str)
+    image = re.sub('^data:image/.+;base64,', '', image)
 
     os.environ['TRANSFORMERS_CACHE'] = '/data/models'
     os.environ['HF_HOME'] = '/data/models'
@@ -114,10 +116,11 @@ def make_masks(image_base64_str, extension, x, y):
         show_mask, show_points
 
     image_id = uuid.uuid4()
+    print(f"image_id: {image_id}")
 
     input_img_name = f"{image_id}{extension}"
 
-    image_bytes = base64.b64decode(image_base64_str)
+    image_bytes = base64.b64decode(image)
 
     img_raw = Image.open(io.BytesIO(image_bytes))
     rgb_img = img_raw.convert('RGB')
@@ -187,7 +190,7 @@ def make_masks(image_base64_str, extension, x, y):
     }
 
 
-@isolated(requirements=requirements, machine_type="GPU-T4")
+@isolated(requirements=requirements, machine_type="GPU-T4", serve=True)
 def edit_image(image_id, mask_id, prompt, extension):
     import sys
 
@@ -237,45 +240,45 @@ def edit_image(image_id, mask_id, prompt, extension):
     }
 
 
-@app.route('/make_masks', methods=['POST'])
-def handle_make_masks():
-    print('Handling make masks')
-    data = request.get_json()
-    image_data = data.get('image')
-    extension = data.get('extension')
-    circle_x = data.get('x')
-    circle_y = data.get('y')
+# @app.route('/make_masks', methods=['POST'])
+# def handle_make_masks():
+#     print('Handling make masks')
+#     data = request.get_json()
+#     image_data = data.get('image')
+#     extension = data.get('extension')
+#     circle_x = data.get('x')
+#     circle_y = data.get('y')
 
-    # Process and store the data as needed
-    start = time.time()
-    result = make_masks(
-        image_data, extension, circle_x, circle_y)
+#     # Process and store the data as needed
+#     start = time.time()
+#     result = make_masks(
+#         image_data, extension, circle_x, circle_y)
 
-    print(f'it took {time.time() - start} seconds')
+#     print(f'it took {time.time() - start} seconds')
 
-    return jsonify(result)
-
-
-@app.route("/edit", methods=['POST'])
-def handle_edit():
-    data = request.get_json()
-    image_id = data.get('image_id')
-    extension = data.get('extension')
-    mask_id = data.get('mask_id')
-    prompt = data.get('prompt')
-
-    start = time.time()
-    result = edit_image(
-        image_id, mask_id, prompt, extension)
-
-    print(f'it took {time.time() - start} seconds')
-
-    return jsonify(result)
+#     return jsonify({ "result": result })
 
 
-@app.route('/results/<path:path>')
-def serve_files(path):
-    return send_from_directory('results', path)
+# @app.route("/edit", methods=['POST'])
+# def handle_edit():
+#     data = request.get_json()
+#     image_id = data.get('image_id')
+#     extension = data.get('extension')
+#     mask_id = data.get('mask_id')
+#     prompt = data.get('prompt')
 
-if __name__ == '__main__':
-    app.run(debug=True)
+#     start = time.time()
+#     result = edit_image(
+#         image_id, mask_id, prompt, extension)
+
+#     print(f'it took {time.time() - start} seconds')
+
+#     return jsonify({ "result": result })
+
+
+# @app.route('/results/<path:path>')
+# def serve_files(path):
+#     return send_from_directory('results', path)
+
+# if __name__ == '__main__':
+#     app.run(debug=True)

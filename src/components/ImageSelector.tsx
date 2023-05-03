@@ -57,7 +57,7 @@ export default function ImageSelector(props: ImageSelectorProps) {
   return (
     <label
       {...getRootProps()}
-      className="flex justify-center w-full h-fill px-4 py-16 transition bg-base-100 bg-opacity-30 border-2 border-dashed rounded-md appearance-none cursor-pointer focus:outline-none"
+      className="flex justify-center w-full h-fill px-4 py-16 transition bg-base-100 bg-opacity-30 border-2 dark:border-base-100 border-dashed rounded-md appearance-none cursor-pointer focus:outline-none"
     >
       <div className="flex flex-col items-center prose">
         <PhotoIcon className="m-auto w-64 h-64 opacity-5" />

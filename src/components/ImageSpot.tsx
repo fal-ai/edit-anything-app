@@ -64,7 +64,7 @@ export default function ImageSpot(props: ImageSpotProps) {
   }, [position]);
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full justify-center items-center">
       <NextImage
         ref={imageRef}
         onClick={handleImageClick}
@@ -72,7 +72,7 @@ export default function ImageSpot(props: ImageSpotProps) {
         width={props.width}
         height={props.height}
         alt="Selected image"
-        className="m-0 mx-auto"
+        className="m-0"
       />
       {position && (
         <div ref={markRef} className="absolute w-4 h-4">

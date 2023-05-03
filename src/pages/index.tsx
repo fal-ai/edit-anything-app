@@ -24,6 +24,7 @@ const Home = () => {
     setSelectedImage(null);
     setPosition(null);
     setMasks([]);
+    setSelectedMask(null);
     setPrompt("");
     setImageUrls([]);
     setLoading(false);
@@ -189,7 +190,9 @@ const Home = () => {
                   <div
                     key={index}
                     className={`border-2 p-2 dark:border-base-100 ${
-                      selectedMask === mask ? "border-secondary" : ""
+                      selectedMask === mask
+                        ? "border-secondary dark:border-secondary"
+                        : ""
                     }`}
                     onClick={handleMaskSelected(mask)}
                   >
@@ -242,7 +245,7 @@ const Home = () => {
               <EmptyMessage message="Nothing to see just yet" />
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 mt-6">
             {imageUrls.map((url, index) => (
               <NextImage
                 key={index}

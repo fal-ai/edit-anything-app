@@ -12,7 +12,7 @@ const handler: NextApiHandler = async (request, response) => {
     response.status(500).json({ message: "EDIT_FUNCTION_URL not set" });
     return;
   }
-  const result = await fetch(EDIT_FUNCTION_URL, {
+  const res = await fetch(EDIT_FUNCTION_URL, {
     method: "POST",
     body: JSON.stringify(request.body),
     headers: {
@@ -21,12 +21,12 @@ const handler: NextApiHandler = async (request, response) => {
       "x-fal-key-secret": process.env.FAL_KEY_SECRET ?? "",
     },
   });
-  if (!result.ok) {
-    response.status(result.status).send(result.statusText);
+  if (!res.ok) {
+    response.status(res.status).send(res.statusText);
     return;
   }
-  const json = await result.json();
-  response.json(json);
+  const { result } = await res.json();
+  response.json(result);
 };
 
 export default handler;
