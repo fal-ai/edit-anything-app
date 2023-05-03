@@ -144,13 +144,7 @@ const Home = () => {
             )}
             {selectedImage && (
               <>
-                <ImageSpot
-                  imageUrl={selectedImage.data}
-                  height={selectedImage.size.height}
-                  width={selectedImage.size.width}
-                  onClick={handleImageClick}
-                />
-                <div className="flex justify-between mt-4">
+                <div className="flex justify-between my-4">
                   <span className="font-light mb-0 inline-block opacity-70">
                     <strong>Hint:</strong> click on the image to set the mask
                     reference point
@@ -163,6 +157,12 @@ const Home = () => {
                     Reset
                   </button>
                 </div>
+                <ImageSpot
+                  imageUrl={selectedImage.data}
+                  height={selectedImage.size.height}
+                  width={selectedImage.size.width}
+                  onClick={handleImageClick}
+                />
               </>
             )}
           </Card>
@@ -188,7 +188,7 @@ const Home = () => {
                 {masks.map((mask, index) => (
                   <div
                     key={index}
-                    className={`border-2 p-2 ${
+                    className={`border-2 p-2 dark:border-base-100 ${
                       selectedMask === mask ? "border-secondary" : ""
                     }`}
                     onClick={handleMaskSelected(mask)}

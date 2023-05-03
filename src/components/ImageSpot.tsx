@@ -72,7 +72,7 @@ export default function ImageSpot(props: ImageSpotProps) {
         width={props.width}
         height={props.height}
         alt="Selected image"
-        className="m-0"
+        className="m-0 mx-auto"
       />
       {position && (
         <div ref={markRef} className="absolute w-4 h-4">
