@@ -5,14 +5,6 @@ import os
 import re
 import uuid
 
-# from flask import Flask, request, jsonify, send_from_directory
-# from flask_cors import CORS
-# import zipfile
-# import time
-
-# app = Flask(__name__)
-# CORS(app)
-
 REPO_PATH = "/data/repos/inpaint-anyting"
 
 BASE_GCS_URL = "https://storage.googleapis.com/fal_edit_anything_results"
@@ -91,7 +83,7 @@ def upload_to_gcs(directory_path: str, dest_blob_name: str, bucket):
         blob.upload_from_filename(os.path.join(directory_path, f))
 
 
-@isolated(requirements=requirements, machine_type="GPU", serve=True)
+@isolated(requirements=requirements, machine_type="GPU", serve=True, keep_alive=0)
 def make_masks(image: str, extension: str, x: int, y: int):
     import sys
     import numpy as np
@@ -190,7 +182,7 @@ def make_masks(image: str, extension: str, x: int, y: int):
     }
 
 
-@isolated(requirements=requirements, machine_type="GPU", serve=True)
+@isolated(requirements=requirements, machine_type="GPU", serve=True, keep_alive=0)
 def edit_image(image_id, mask_id, prompt, extension):
     import sys
 
@@ -238,47 +230,3 @@ def edit_image(image_id, mask_id, prompt, extension):
         "status": "success",
         "files": file_names,
     }
-
-
-# @app.route('/make_masks', methods=['POST'])
-# def handle_make_masks():
-#     print('Handling make masks')
-#     data = request.get_json()
-#     image_data = data.get('image')
-#     extension = data.get('extension')
-#     circle_x = data.get('x')
-#     circle_y = data.get('y')
-
-#     # Process and store the data as needed
-#     start = time.time()
-#     result = make_masks(
-#         image_data, extension, circle_x, circle_y)
-
-#     print(f'it took {time.time() - start} seconds')
-
-#     return jsonify({ "result": result })
-
-
-# @app.route("/edit", methods=['POST'])
-# def handle_edit():
-#     data = request.get_json()
-#     image_id = data.get('image_id')
-#     extension = data.get('extension')
-#     mask_id = data.get('mask_id')
-#     prompt = data.get('prompt')
-
-#     start = time.time()
-#     result = edit_image(
-#         image_id, mask_id, prompt, extension)
-
-#     print(f'it took {time.time() - start} seconds')
-
-#     return jsonify({ "result": result })
-
-
-# @app.route('/results/<path:path>')
-# def serve_files(path):
-#     return send_from_directory('results', path)
-
-# if __name__ == '__main__':
-#     app.run(debug=True)

@@ -39,14 +39,24 @@ The web endpoint uses Google Cloud Storage for saving the inference results. So 
 fal-serverless secrets set GCLOUD_SA_JSON "$(cat path-to-my-service-account.json)"
 ```
 
-### Deploy the `replace_anything` function as a web endpoint
+### Deploy the `edit_image` and `make_masks` functions as a web endpoints
 
 ```bash
-fal-serverless function serve replace.py run_replace --alias replace
+fal-serverless function serve serverless/app.py edit_image --alias edit_image
+fal-serverless function serve serverless/app.py make_masks --alias make_masks
 ```
 And set the provided URL as an environment variable:
 ```bash
-export REPLACE_ANYTHING_URL="your-web-endpoint-url"
+export MASK_FUNCTION_URL=your_mask_endpoint_url EDIT_FUNCTION_URL=your_edit_endpoint_url
+```
+
+You can also set these in `.env.local` file:
+
+```text
+FAL_KEY_ID=key_id_value
+FAL_KEY_SECRET=key_secret_value
+MASK_FUNCTION_URL=mask_endpoint_url
+EDIT_FUNCTION_URL=edit_endpoint_url
 ```
 
 ### Start the local dev server
