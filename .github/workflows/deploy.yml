@@ -33,7 +33,7 @@ jobs:
     - name: Deploy fal-serverless functions
       env:
         FAL_KEY_ID: ${{ secrets.FAL_KEY_ID }}
-        FAL_KEY_SECRETS: ${{ secrets.FAL_KEY_SECRET }}
+        FAL_KEY_SECRET: ${{ secrets.FAL_KEY_SECRET }}
       run: |
         cd edit-anything-app
         fal-serverless secrets set GCLOUD_SA_JSON "${{ secrets.GCP_SA_JSON }}"
