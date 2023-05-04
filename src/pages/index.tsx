@@ -192,7 +192,7 @@ const Home = () => {
                 <div className="flex flex-col items-center">
                   <button
                     className="btn btn-primary"
-                    // disabled={isLoading || !selectedImage || !position}
+                    disabled={isLoading || !selectedImage || !position}
                     onClick={generateMasks}
                   >
                     Generate masks
