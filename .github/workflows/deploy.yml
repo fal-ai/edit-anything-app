@@ -7,8 +7,8 @@ env:
 
 on:
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
 
 jobs:
 
@@ -35,8 +35,9 @@ jobs:
         FAL_KEY_ID: ${{ secrets.FAL_KEY_ID }}
         FAL_KEY_SECRET: ${{ secrets.FAL_KEY_SECRET }}
       run: |
-        fal-serverless function serve ./serverless/app.py make_masks --alias edit_anything_make_masks
-        fal-serverless function serve ./serverless/app.py edit_image --alias edit_anything_edit_image
+        : # fal-serverless secrets set GCLOUD_SA_JSON "${{ secrets.GCP_SA_JSON }}"
+        : # fal-serverless function serve ./serverless/app.py make_masks --alias edit_anything_make_masks
+        : # fal-serverless function serve ./serverless/app.py edit_image --alias edit_anything_edit_image
 
   deploy-app:
     runs-on: ubuntu-latest
