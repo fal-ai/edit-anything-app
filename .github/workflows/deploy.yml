@@ -1,0 +1,70 @@
+name: Deploy
+
+env:
+  FAL_HOST: ${{ secrets.FAL_HOST }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  setup-fal-serverless:
+    runs-on: ubuntu-latest
+    name: Setup fal-serverless
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install fal-serverless
+
+    - name: Deploy fal-serverless functions
+      env:
+        FAL_KEY_ID: ${{ secrets.FAL_KEY_ID }}
+        FAL_KEY_SECRETS: ${{ secrets.FAL_KEY_SECRET }}
+      run: |
+        cd edit-anything-app
+        fal-serverless secrets set GCLOUD_SA_JSON "${{ secrets.GCP_SA_JSON }}"
+        fal-serverless function serve ./serverless/app.py make_masks --alias edit_anything_make_masks
+        fal-serverless function serve ./serverless/app.py edit_image --alias edit_anything_edit_image
+
+  deploy-app:
+    runs-on: ubuntu-latest
+    name: Deploy to Vercel
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - name: Install Node dependencies
+        run: |
+          cd edit-anything-app
+          npm ci
+
+      - name: Deploy to Vercel
+        run: |
+          cd edit-anything-app
+          npm install -g vercel@latest
+          vercel env add FAL_GATEWAY_HOST "${{ secrets.FAL_GATEWAY_HOST }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
+          vercel env add FAL_KEY_ID "${{ secrets.FAL_KEY_ID }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
+          vercel env add FAL_KEY_SECRET "${{ secrets.FAL_KEY_SECRET }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
+          vercel env add MASK_FUNCTION_URL "${{ secrets.MASK_FUNCTION_URL }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
+          vercel env add EDIT_FUNCTION_URL "${{ secrets.EDIT_FUNCTION_URL }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
+          vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
