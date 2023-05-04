@@ -91,7 +91,7 @@ def upload_to_gcs(directory_path: str, dest_blob_name: str, bucket):
         blob.upload_from_filename(os.path.join(directory_path, f))
 
 
-@isolated(requirements=requirements, machine_type="GPU-T4", serve=True)
+@isolated(requirements=requirements, machine_type="GPU", serve=True)
 def make_masks(image: str, extension: str, x: int, y: int):
     import sys
     import numpy as np
@@ -190,7 +190,7 @@ def make_masks(image: str, extension: str, x: int, y: int):
     }
 
 
-@isolated(requirements=requirements, machine_type="GPU-T4", serve=True)
+@isolated(requirements=requirements, machine_type="GPU", serve=True)
 def edit_image(image_id, mask_id, prompt, extension):
     import sys
 
