@@ -35,7 +35,6 @@ jobs:
         FAL_KEY_ID: ${{ secrets.FAL_KEY_ID }}
         FAL_KEY_SECRET: ${{ secrets.FAL_KEY_SECRET }}
       run: |
-        cd edit-anything-app
         fal-serverless secrets set GCLOUD_SA_JSON "${{ secrets.GCP_SA_JSON }}"
         fal-serverless function serve ./serverless/app.py make_masks --alias edit_anything_make_masks
         fal-serverless function serve ./serverless/app.py edit_image --alias edit_anything_edit_image
@@ -43,6 +42,7 @@ jobs:
   deploy-app:
     runs-on: ubuntu-latest
     name: Deploy to Vercel
+    depends-on: setup-fal-serverless
 
     steps:
       - name: Checkout repository
@@ -55,12 +55,10 @@ jobs:
 
       - name: Install Node dependencies
         run: |
-          cd edit-anything-app
           npm ci
 
       - name: Deploy to Vercel
         run: |
-          cd edit-anything-app
           npm install -g vercel@latest
           vercel env add FAL_GATEWAY_HOST "${{ secrets.FAL_GATEWAY_HOST }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
           vercel env add FAL_KEY_ID "${{ secrets.FAL_KEY_ID }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
