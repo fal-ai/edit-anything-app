@@ -35,9 +35,9 @@ jobs:
         FAL_KEY_ID: ${{ secrets.FAL_KEY_ID }}
         FAL_KEY_SECRET: ${{ secrets.FAL_KEY_SECRET }}
       run: |
-        fal-serverless secrets set GCLOUD_SA_JSON "${{ secrets.GCP_SA_JSON }}"
-        fal-serverless function serve ./serverless/app.py make_masks --alias edit_anything_make_masks
-        fal-serverless function serve ./serverless/app.py edit_image --alias edit_anything_edit_image
+        : # fal-serverless secrets set GCLOUD_SA_JSON "${{ secrets.GCP_SA_JSON }}"
+        : # fal-serverless function serve ./serverless/app.py make_masks --alias edit_anything_make_masks
+        : # fal-serverless function serve ./serverless/app.py edit_image --alias edit_anything_edit_image
 
   deploy-app:
     runs-on: ubuntu-latest
@@ -57,12 +57,15 @@ jobs:
         run: |
           npm ci
 
-      - name: Deploy to Vercel
+      - name: Install Vercel CLI
         run: |
           npm install -g vercel@latest
-          vercel env add FAL_GATEWAY_HOST "${{ secrets.FAL_GATEWAY_HOST }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
-          vercel env add FAL_KEY_ID "${{ secrets.FAL_KEY_ID }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
-          vercel env add FAL_KEY_SECRET "${{ secrets.FAL_KEY_SECRET }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
-          vercel env add MASK_FUNCTION_URL "${{ secrets.MASK_FUNCTION_URL }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
-          vercel env add EDIT_FUNCTION_URL "${{ secrets.EDIT_FUNCTION_URL }}" --scope production --token ${{ secrets.VERCEL_TOKEN }}
-          vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
+
+      - name: Pull Vercel environment information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build project
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy project to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
