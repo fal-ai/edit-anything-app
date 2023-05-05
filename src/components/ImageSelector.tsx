@@ -132,7 +132,7 @@ export default function ImageSelector(props: ImageSelectorProps) {
         disabled={props.disabled}
         onChange={onFileSelected}
       />
-      <canvas ref={canvasRef} />
+      <canvas ref={canvasRef} className="hidden" />
     </>
   );
 }
