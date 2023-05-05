@@ -1,5 +1,5 @@
 import { PhotoIcon } from "@heroicons/react/24/outline";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 
 export interface ImageFile {
@@ -21,25 +21,54 @@ export interface ImageSelectorProps {
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 
 export default function ImageSelector(props: ImageSelectorProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { onImageSelect } = props;
 
-  const readImage = (file: File, callback: OnImageSelect) => {
-    let data = "";
-    const image = new Image();
-    const reader = new FileReader();
-    image.onload = () => {
-      callback({
-        data,
+  const resizeImage = useCallback((file: File, image: HTMLImageElement) => {
+    if (file.size <= MAX_FILE_SIZE) {
+      return {
+        data: image.src,
         filename: file.name,
         size: { width: image.width, height: image.height },
-      });
+      } as ImageFile;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      throw new Error("Canvas element not found");
+    }
+    const scalingFactor = Math.sqrt(MAX_FILE_SIZE / file.size);
+    canvas.width = image.width * scalingFactor;
+    canvas.height = image.height * scalingFactor;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Canvas context coould not be initialized");
+    }
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    return {
+      data: canvas.toDataURL("image/jpeg"),
+      filename: file.name,
+      size: { width: canvas.width, height: canvas.height },
     };
-    reader.onloadend = () => {
-      data = reader.result?.toString() ?? data;
-      image.src = data;
-    };
-    reader.readAsDataURL(file);
-  };
+  }, []);
+
+  const readImage = useCallback(
+    (file: File, callback: OnImageSelect) => {
+      let data = "";
+      const image = new Image();
+      const reader = new FileReader();
+      image.onload = () => {
+        callback(resizeImage(file, image));
+      };
+      reader.onloadend = () => {
+        data = reader.result?.toString() ?? data;
+        image.src = data;
+      };
+      reader.readAsDataURL(file);
+    },
+    [resizeImage]
+  );
 
   const onFileSelected = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +77,7 @@ export default function ImageSelector(props: ImageSelectorProps) {
         readImage(file, onImageSelect);
       }
     },
-    [onImageSelect]
+    [onImageSelect, readImage]
   );
   const onDrop = useCallback(
     (files: File[]) => {
@@ -57,7 +86,7 @@ export default function ImageSelector(props: ImageSelectorProps) {
         readImage(file, onImageSelect);
       }
     },
-    [onImageSelect]
+    [onImageSelect, readImage]
   );
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
@@ -66,7 +95,6 @@ export default function ImageSelector(props: ImageSelectorProps) {
       "image/png": [".png"],
     },
     maxFiles: 1,
-    maxSize: MAX_FILE_SIZE,
   });
 
   return (
@@ -104,6 +132,7 @@ export default function ImageSelector(props: ImageSelectorProps) {
         disabled={props.disabled}
         onChange={onFileSelected}
       />
+      <canvas ref={canvasRef} className="hidden" />
     </>
   );
 }
