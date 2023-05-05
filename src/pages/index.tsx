@@ -1,3 +1,5 @@
+import * as fal from "@fal-ai/serverless-client";
+import { withNextProxy } from "@fal-ai/serverless-nextjs";
 import Head from "next/head";
 import NextImage from "next/image";
 import { useEffect, useState } from "react";
@@ -9,6 +11,13 @@ import ImageMask from "@/components/ImageMask";
 import ImageSelector, { ImageFile } from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
 import Steps, { StepName } from "@/components/Steps";
+import { makeMasks } from "@/services/makeMasks";
+import { editImage } from "@/services/editImage";
+
+fal.config({
+  host: "gateway.alpha.fal.ai",
+  requestMiddleware: withNextProxy(),
+});
 
 type ErrorMessage = {
   message: string;
@@ -67,26 +76,14 @@ const Home = () => {
         });
         return;
       }
-      const response = await fetch("/api/masks", {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          image: selectedImage.data,
-          extension: "." + selectedImage.filename.split(".").pop(),
-          x: position.x,
-          y: position.y,
-        }),
+      const { result } = await makeMasks({
+        image: selectedImage.data,
+        extension: "." + selectedImage.filename.split(".").pop(),
+        x: position.x,
+        y: position.y,
       });
-
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
-      const data = await response.json();
-      setMasks(data.files);
-      setImageId(data.image_id);
+      setMasks(result.files);
+      setImageId(result.image_id);
       setStep(StepName.ChooseMask);
     } catch (e: any) {
       setError({ message: "Failed to generate masks", details: e.message });
@@ -103,9 +100,9 @@ const Home = () => {
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      if (!selectedImage || !position || !selectedMask) {
+      if (!selectedImage || !position || !selectedMask || !imageId) {
         setError({
-          message: "You must add an image and select a mask before.",
+          message: "You must add an image, select a mask and set a prompt.",
         });
         return;
       }
@@ -115,25 +112,14 @@ const Home = () => {
         setError({ message: "Failed to extract mask id from mask url" });
         return;
       }
-      const response = await fetch("/api/edit", {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          image_id: imageId,
-          extension: "." + selectedImage.filename.split(".").pop(),
-          mask_id: maskId,
-          prompt,
-        }),
+      const { result } = await editImage({
+        image_id: imageId,
+        extension: "." + selectedImage.filename.split(".").pop(),
+        mask_id: maskId,
+        prompt: prompt ?? "",
       });
 
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
-      const data = await response.json();
-      setImageUrls(data.files);
+      setImageUrls(result.files);
       setStep(StepName.Generate);
     } catch (e: any) {
       setError({ message: "Failed to generate images", details: e.message });
