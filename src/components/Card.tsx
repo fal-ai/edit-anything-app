@@ -8,13 +8,13 @@ export interface CardProps {
 export default function Card(props: PropsWithChildren<CardProps>) {
   return (
     <div
-      className={`prose card rounded-md bg-base-200 shadow max-w-full ${
+      className={`prose card rounded-none md:rounded-md bg-base-200 shadow-sm md:shadow max-w-full ${
         props.classNames ?? ""
       }`}
     >
-      <div className="card-body">
+      <div className="card-body p-4 md:p-8">
         {props.title && (
-          <h3 className="card-title font-light uppercase opacity-60 mt-0">
+          <h3 className="card-title text-sm md:text-lg font-light uppercase opacity-60 mt-0">
             {props.title}
           </h3>
         )}
