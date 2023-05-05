@@ -134,7 +134,9 @@ const Home = () => {
       }
       const data = await response.json();
       const timestamp = Date.now();
-      const images = data.files.map((imageUrl: string) => `${imageUrl}?t=${timestamp}`);
+      const images = data.files.map(
+        (imageUrl: string) => `${imageUrl}?t=${timestamp}`
+      );
       setImageUrls(images);
       setStep(StepName.Generate);
     } catch (e: any) {
