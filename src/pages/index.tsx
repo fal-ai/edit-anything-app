@@ -1,14 +1,22 @@
 import Head from "next/head";
 import NextImage from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Card from "@/components/Card";
+import EmptyMessage from "@/components/EmptyMessage";
+import ErrorNotification from "@/components/ErrorNotification";
+import ImageMask from "@/components/ImageMask";
+import ImageSelector, { ImageFile } from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
 import Steps, { StepName } from "@/components/Steps";
-import EmptyMessage from "@/components/EmptyMessage";
-import ImageSelector, { ImageFile } from "@/components/ImageSelector";
+
+type ErrorMessage = {
+  message: string;
+  details?: string;
+};
 
 const Home = () => {
+  const [error, setError] = useState<ErrorMessage | null>(null);
   const [step, setStep] = useState<StepName>(StepName.ChooseImage);
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [position, setPosition] = useState<ImageSpotPosition | null>(null);
@@ -21,14 +29,20 @@ const Home = () => {
 
   const reset = () => {
     setStep(StepName.ChooseImage);
+    setError(null);
     setSelectedImage(null);
     setPosition(null);
+    setImageId(null);
     setMasks([]);
     setSelectedMask(null);
     setPrompt("");
     setImageUrls([]);
     setLoading(false);
   };
+
+  useEffect(() => {
+    setError(null);
+  }, [step, selectedImage, position, selectedMask]);
 
   const handleImageSelected = (image: ImageFile) => {
     setSelectedImage(image);
@@ -44,7 +58,9 @@ const Home = () => {
     setLoading(true);
     try {
       if (!selectedImage || !position) {
-        // TODO error message?
+        setError({
+          message: "You must add an image and select a mask position",
+        });
         return;
       }
       const response = await fetch("/api/masks", {
@@ -68,31 +84,31 @@ const Home = () => {
       setMasks(data.files);
       setImageId(data.image_id);
       setStep(StepName.ChooseMask);
-    } catch (e) {
-      // TODO set error state
+    } catch (e: any) {
+      setError({ message: "Failed to generate masks", details: e.message });
     } finally {
       setLoading(false);
     }
   };
 
   const handleMaskSelected = (mask: string) => {
-    return () => {
-      setSelectedMask(mask);
-      setStep(StepName.DefinePrompt);
-    };
+    setSelectedMask(mask);
+    setStep(StepName.DefinePrompt);
   };
 
   const handleGenerate = async () => {
     setLoading(true);
     try {
       if (!selectedImage || !position || !selectedMask) {
-        // TODO set error state / message
+        setError({
+          message: "You must add an image and select a mask before.",
+        });
         return;
       }
       // extract the maskId from the mask url using the with_mask_(\d+) pattern
       const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
       if (!maskId) {
-        // TODO set error state / message
+        setError({ message: "Failed to extract mask id from mask url" });
         return;
       }
       const response = await fetch("/api/edit", {
@@ -115,8 +131,8 @@ const Home = () => {
       const data = await response.json();
       setImageUrls(data.files);
       setStep(StepName.Generate);
-    } catch (e) {
-      // TODO set error state
+    } catch (e: any) {
+      setError({ message: "Failed to generate images", details: e.message });
     } finally {
       setLoading(false);
     }
@@ -136,7 +152,7 @@ const Home = () => {
           </Card>
         </div>
         <div className="md:col-span-2">
-          <Card title="Source image">
+          <Card title="Source image" classNames="min-h-full">
             {!selectedImage && (
               <ImageSelector
                 onImageSelect={handleImageSelected}
@@ -145,13 +161,13 @@ const Home = () => {
             )}
             {selectedImage && (
               <>
-                <div className="flex justify-between my-4">
+                <div className="flex justify-between">
                   <span className="font-light mb-0 inline-block opacity-70">
                     <strong>Hint:</strong> click on the image to set the mask
                     reference point
                   </span>
                   <button
-                    className="btn btn-outline btn-secondary self-end"
+                    className="btn btn-outline btn-sm self-end"
                     onClick={reset}
                     disabled={isLoading}
                   >
@@ -185,29 +201,22 @@ const Home = () => {
               </div>
             )}
             {masks.length > 0 && (
-              <div className="grid grid-cols-1 space-y-2">
-                {masks.map((mask, index) => (
-                  <div
-                    key={index}
-                    className={`border-2 p-2 dark:border-base-100 ${
-                      selectedMask === mask
-                        ? "border-secondary dark:border-secondary"
-                        : ""
-                    }`}
-                    onClick={handleMaskSelected(mask)}
-                  >
-                    <NextImage
-                      src={mask}
-                      alt={`Mask ${index + 1}`}
-                      width={0}
-                      height={0}
-                      sizes="100vw"
-                      style={{ width: "100%", height: "auto" }}
-                      className="my-0"
+              <>
+                <span className="font-light mb-0 inline-block opacity-70">
+                  <strong>Hint:</strong> click on the image select a mask
+                </span>
+                <div className="grid grid-cols-1 space-y-2">
+                  {masks.map((mask, index) => (
+                    <ImageMask
+                      key={index}
+                      alt={`Mask ${index}`}
+                      mask={mask}
+                      selected={selectedMask === mask}
+                      onClick={handleMaskSelected}
                     />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </Card>
         </div>
@@ -227,7 +236,7 @@ const Home = () => {
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="something creative, like 'a bus on the moon'"
-                  className="input placeholder-gray-500 w-full"
+                  className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
                   disabled={isLoading}
                 />
               </label>
@@ -271,6 +280,7 @@ const Home = () => {
           </div>
         </div>
       )}
+      {error && <ErrorNotification {...error} />}
     </main>
   );
 };

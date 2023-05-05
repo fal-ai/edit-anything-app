@@ -8,7 +8,7 @@ export interface CardProps {
 export default function Card(props: PropsWithChildren<CardProps>) {
   return (
     <div
-      className={`card bg-base-200 prose shadow max-w-full ${
+      className={`prose card rounded-md bg-base-200 shadow max-w-full ${
         props.classNames ?? ""
       }`}
     >
