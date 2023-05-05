@@ -44,6 +44,10 @@ const Home = () => {
     setError(null);
   }, [step, selectedImage, position, selectedMask]);
 
+  const dismissError = () => {
+    setError(null);
+  };
+
   const handleImageSelected = (image: ImageFile) => {
     setSelectedImage(image);
     setStep(StepName.SetMaskPoint);
@@ -141,12 +145,12 @@ const Home = () => {
   const hasPrompt = prompt && prompt.trim().length > 0;
 
   return (
-    <main className="min-h-screen py-16">
+    <main className="min-h-screen md:py-12">
       <Head>
         <title>Edit Anything | fal-serverless</title>
       </Head>
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-        <div className="md:col-span-3">
+        <div className="hidden md:display md:col-span-3">
           <Card>
             <Steps currentStep={step} />
           </Card>
@@ -187,11 +191,13 @@ const Home = () => {
         <div className="md:col-span-1">
           <Card title="Masks" classNames="min-h-full">
             {masks.length === 0 && (
-              <div className="mt-12">
-                <EmptyMessage message="No masks generated yet" />
+              <div className="items-center mt-0 md:mt-12">
+                <div className="hidden md:display">
+                  <EmptyMessage message="No masks generated yet" />
+                </div>
                 <div className="flex flex-col items-center">
                   <button
-                    className="btn btn-primary"
+                    className="btn btn-primary max-sm:btn-wide mb-4 md:mb-0"
                     disabled={isLoading || !selectedImage || !position}
                     onClick={generateMasks}
                   >
@@ -222,13 +228,10 @@ const Home = () => {
         </div>
       </div>
       <div className="container mx-auto pt-8 w-full">
-        <Card>
-          <div className="flex space-x-6">
-            <div className="form-control w-3/5 max-w-full">
-              <label className="input-group">
-                <span>
-                  <code className="opacity-40">/imagine</code>
-                </span>
+        <Card title="Imagine...">
+          <div className="flex flex-col md:flex-row md:space-x-6">
+            <div className="form-control w-full md:w-3/5 max-w-full">
+              <label>
                 <input
                   id="prompt_input"
                   type="text"
@@ -242,7 +245,7 @@ const Home = () => {
               </label>
             </div>
             <button
-              className="btn btn-primary"
+              className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
               disabled={isLoading || !selectedMask || !hasPrompt}
               onClick={handleGenerate}
             >
@@ -254,7 +257,7 @@ const Home = () => {
               <EmptyMessage message="Nothing to see just yet" />
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4 mt-6">
+          <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
             {imageUrls.map((url, index) => (
               <NextImage
                 key={index}
@@ -272,7 +275,7 @@ const Home = () => {
       </div>
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="alert max-w-md shadow-lg p-12">
+          <div className="alert max-w-md shadow-lg p-6 md:p-12 mx-4 md:mx-0">
             <div className="flex-col items-center pt-6 w-full">
               <progress className="progress progress-primary w-max-[60%]"></progress>
               <p className="my-4">Hold on tight, we&apos;re working on it!</p>
@@ -280,7 +283,7 @@ const Home = () => {
           </div>
         </div>
       )}
-      {error && <ErrorNotification {...error} />}
+      {error && <ErrorNotification {...error} onDismiss={dismissError} />}
     </main>
   );
 };

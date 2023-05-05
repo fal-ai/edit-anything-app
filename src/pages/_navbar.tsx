@@ -19,13 +19,7 @@ export default function NavBar() {
             </a>
           </span>
         </div>
-        <div className="flex-none">
-          <ul className="text-sm menu menu-horizontal px-1">
-            <li>
-              <a>About</a>
-            </li>
-          </ul>
-        </div>
+        <div className="flex-none"></div>
       </div>
     </div>
   );
