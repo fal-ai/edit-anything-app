@@ -133,7 +133,9 @@ const Home = () => {
         throw new Error(`Request failed with status ${response.status}`);
       }
       const data = await response.json();
-      setImageUrls(data.files);
+      const timestamp = Date.now();
+      const images = data.files.map((imageUrl: string) => `${imageUrl}?t=${timestamp}`);
+      setImageUrls(images);
       setStep(StepName.Generate);
     } catch (e: any) {
       setError({ message: "Failed to generate images", details: e.message });
