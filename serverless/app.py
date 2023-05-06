@@ -18,6 +18,7 @@ MODEL_PATH = "/data/models/sam_vit_h_4b8939.pth"
 MODEL_URL = "https://huggingface.co/spaces/facebook/ov-seg/resolve/main/sam_vit_h_4b8939.pth"
 
 requirements = [
+    "flask",
     "torch",
     "torchvision",
     "torchaudio",
@@ -35,6 +36,7 @@ requirements = [
 
 @cached
 def clone_repo():
+    print("---> This is clone_repo()")
     import os
     if not os.path.exists(REPO_PATH):
         print("Cloning inpaint repository")
@@ -44,6 +46,7 @@ def clone_repo():
 
 @cached
 def download_model():
+    print("---> This is download_model()")
     import os
     if not os.path.exists("/data/models"):
         os.system("mkdir /data/models")
@@ -54,6 +57,7 @@ def download_model():
 
 @cached
 def get_gcs_bucket():
+    print("---> This is get_gcs_bucket()")
     import os
     import json
 
@@ -83,7 +87,7 @@ def upload_to_gcs(directory_path: str, dest_blob_name: str, bucket):
         blob.upload_from_filename(os.path.join(directory_path, f))
 
 
-@isolated(requirements=requirements, machine_type="GPU", serve=True, keep_alive=0)
+# @isolated(requirements=requirements, machine_type="GPU", keep_alive=60)
 def make_masks(image: str, extension: str, x: int, y: int):
     import sys
     import numpy as np
@@ -97,7 +101,10 @@ def make_masks(image: str, extension: str, x: int, y: int):
     os.environ['TRANSFORMERS_CACHE'] = '/data/models'
     os.environ['HF_HOME'] = '/data/models'
 
+    print("=== Cloning inpaint repository")
     clone_repo()
+
+    print("=== Downloading SAM model")
     download_model()
 
     sys.path.append(REPO_PATH)
@@ -182,7 +189,7 @@ def make_masks(image: str, extension: str, x: int, y: int):
     }
 
 
-@isolated(requirements=requirements, machine_type="GPU", serve=True, keep_alive=0)
+# @isolated(requirements=requirements, machine_type="GPU", keep_alive=60)
 def edit_image(image_id, mask_id, prompt, extension):
     import sys
 
@@ -230,3 +237,41 @@ def edit_image(image_id, mask_id, prompt, extension):
         "status": "success",
         "files": file_names,
     }
+
+# ------ Flask app ------
+
+@isolated(
+    requirements=requirements,
+    machine_type="GPU",
+    # machine_type="M",
+    keep_alive=60,
+    exposed_port=8080
+)
+def app():
+    from flask import Flask, jsonify, request
+
+    app = Flask("fal-editanything")
+
+    @app.route("/masks", methods=["POST"])
+    def masks():
+        data = request.get_json()
+        image = data["image"]
+        x = data["x"]
+        y = data["y"]
+        extension = data["extension"]
+
+        result = make_masks(image, extension, x, y)
+        return jsonify({ "result": result })
+
+    @app.route("/edit", methods=["POST"])
+    def edit():
+        data = request.get_json()
+        image_id = data["image_id"]
+        mask_id = data["mask_id"]
+        prompt = data["prompt"]
+        extension = data["extension"]
+
+        result = edit_image(image_id, mask_id, prompt, extension)
+        return jsonify({ "result": result })
+
+    app.run(host="0.0.0.0", port=8080)
