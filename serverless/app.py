@@ -1,3 +1,4 @@
+from typing import List
 from fal_serverless import isolated, cached
 
 import base64
@@ -15,7 +16,9 @@ segment_anything_repo = (
 )
 
 MODEL_PATH = "/data/models/sam_vit_h_4b8939.pth"
-MODEL_URL = "https://huggingface.co/spaces/facebook/ov-seg/resolve/main/sam_vit_h_4b8939.pth"
+MODEL_URL = (
+    "https://huggingface.co/spaces/facebook/ov-seg/resolve/main/sam_vit_h_4b8939.pth"
+)
 
 requirements = [
     "flask",
@@ -30,7 +33,7 @@ requirements = [
     "opencv-python",
     "matplotlib",
     f"git+{segment_anything_repo}",
-    "google-cloud-storage"
+    "google-cloud-storage",
 ]
 
 
@@ -38,16 +41,18 @@ requirements = [
 def clone_repo():
     print("---> This is clone_repo()")
     import os
+
     if not os.path.exists(REPO_PATH):
         print("Cloning inpaint repository")
-        command = (
-            f"git clone --depth=1 https://github.com/geekyutao/Inpaint-Anything {REPO_PATH}")
+        command = f"git clone --depth=1 https://github.com/geekyutao/Inpaint-Anything {REPO_PATH}"
         os.system(command)
+
 
 @cached
 def download_model():
     print("---> This is download_model()")
     import os
+
     if not os.path.exists("/data/models"):
         os.system("mkdir /data/models")
     if not os.path.exists(MODEL_PATH):
@@ -64,13 +69,14 @@ def get_gcs_bucket():
     sa = os.environ.get("GCLOUD_SA_JSON")
     loaded = json.loads(sa, strict=False)
 
-    with open('/root/gcp_sa.json', 'w') as f:
+    with open("/root/gcp_sa.json", "w") as f:
         json.dump(loaded, f)
 
     from google.cloud import storage
+
     try:
-        storage_client = storage.Client.from_service_account_json('/root/gcp_sa.json')
-        bucket = storage_client.get_bucket('fal_edit_anything_results')
+        storage_client = storage.Client.from_service_account_json("/root/gcp_sa.json")
+        bucket = storage_client.get_bucket("fal_edit_anything_results")
         return bucket
     except Exception as e:
         # Stringify original error so that it can be passed to the fal-serverless client
@@ -81,10 +87,81 @@ def upload_to_gcs(directory_path: str, dest_blob_name: str, bucket):
     import glob
     import os
     from google.cloud import storage
+
     for f in os.listdir(directory_path):
-        remote_path = f'{dest_blob_name}/{f}'
+        remote_path = f"{dest_blob_name}/{f}"
         blob = bucket.blob(remote_path)
         blob.upload_from_filename(os.path.join(directory_path, f))
+
+
+@cached
+def sam_predictor(
+    model_type: str,
+    ckpt_p: str,
+):
+    from segment_anything import SamPredictor, sam_model_registry
+
+    print("---> This is inside sam predictor")
+
+    sam = sam_model_registry[model_type](checkpoint=ckpt_p)
+    sam.to(device="cuda")
+    return SamPredictor(sam)
+
+
+@cached
+def stable_diffusion_pipe():
+    import torch
+    from diffusers import StableDiffusionInpaintPipeline
+
+    return StableDiffusionInpaintPipeline.from_pretrained(
+        "stabilityai/stable-diffusion-2-inpainting",
+        torch_dtype=torch.float32,
+    ).to("cuda")
+
+
+def predict_masks_with_sam(
+    img,
+    point_coords: List[List[float]],
+    point_labels: List[int],
+    model_type: str,
+    ckpt_p: str,
+    device="cuda",
+):
+    import numpy as np
+
+    point_coords = np.array(point_coords)
+    point_labels = np.array(point_labels)
+    predictor = sam_predictor(model_type, ckpt_p)
+
+    predictor.set_image(img)
+    masks, scores, logits = predictor.predict(
+        point_coords=point_coords,
+        point_labels=point_labels,
+        multimask_output=True,
+    )
+    return masks, scores, logits
+
+
+def replace_img_with_sd(img, mask, text_prompt: str, step: int = 50):
+    from utils.crop_for_replacing import recover_size, resize_and_pad
+    import PIL.Image as Image
+    import numpy as np
+
+    pipe = stable_diffusion_pipe()
+    img_padded, mask_padded, padding_factors = resize_and_pad(img, mask)
+    img_padded = pipe(
+        prompt=text_prompt,
+        image=Image.fromarray(img_padded),
+        mask_image=Image.fromarray(255 - mask_padded),
+        num_inference_steps=step,
+    ).images[0]
+    height, width, _ = img.shape
+    img_resized, mask_resized = recover_size(
+        np.array(img_padded), mask_padded, (height, width), padding_factors
+    )
+    mask_resized = np.expand_dims(mask_resized, -1) / 255
+    img_resized = img_resized * (1 - mask_resized) + img * mask_resized
+    return img_resized
 
 
 # @isolated(requirements=requirements, machine_type="GPU", keep_alive=60)
@@ -96,10 +173,10 @@ def make_masks(image: str, extension: str, x: int, y: int):
     from pathlib import Path
     from matplotlib import pyplot as plt
 
-    image = re.sub('^data:image/.+;base64,', '', image)
+    image = re.sub("^data:image/.+;base64,", "", image)
 
-    os.environ['TRANSFORMERS_CACHE'] = '/data/models'
-    os.environ['HF_HOME'] = '/data/models'
+    os.environ["TRANSFORMERS_CACHE"] = "/data/models"
+    os.environ["HF_HOME"] = "/data/models"
 
     print("=== Cloning inpaint repository")
     clone_repo()
@@ -110,9 +187,7 @@ def make_masks(image: str, extension: str, x: int, y: int):
     sys.path.append(REPO_PATH)
     os.chdir(REPO_PATH)
 
-    from sam_segment import predict_masks_with_sam
-    from utils import load_img_to_array, save_array_to_img, \
-        show_mask, show_points
+    from utils import load_img_to_array, save_array_to_img, show_mask, show_points
 
     image_id = uuid.uuid4()
     print(f"image_id: {image_id}")
@@ -122,13 +197,13 @@ def make_masks(image: str, extension: str, x: int, y: int):
     image_bytes = base64.b64decode(image)
 
     img_raw = Image.open(io.BytesIO(image_bytes))
-    rgb_img = img_raw.convert('RGB')
+    rgb_img = img_raw.convert("RGB")
 
-    print('Saving image')
+    print("Saving image")
     print(f"./{input_img_name}")
     rgb_img.save(f"./{input_img_name}")
     img = load_img_to_array(f"./{input_img_name}")
-    print('Generating masks')
+    print("Generating masks")
     masks, _, _ = predict_masks_with_sam(
         img,
         [[float(x), float(y)]],
@@ -136,7 +211,7 @@ def make_masks(image: str, extension: str, x: int, y: int):
         model_type="vit_h",
         ckpt_p="/data/models/sam_vit_h_4b8939.pth",
     )
-    print('Done')
+    print("Done")
     masks = masks.astype(np.uint8) * 255
 
     img_stem = Path(f"./{input_img_name}").stem
@@ -153,53 +228,48 @@ def make_masks(image: str, extension: str, x: int, y: int):
         save_array_to_img(mask, mask_p)
 
         # save the pointed and masked image
-        dpi = plt.rcParams['figure.dpi']
+        dpi = plt.rcParams["figure.dpi"]
         height, width = img.shape[:2]
-        plt.figure(figsize=(width/dpi/0.77, height/dpi/0.77))
+        plt.figure(figsize=(width / dpi / 0.77, height / dpi / 0.77))
         plt.imshow(img)
-        plt.axis('off')
-        show_points(plt.gca(), [x, y], 1,
-                    size=(width*0.04)**2)
-        plt.savefig(img_points_p, bbox_inches='tight', pad_inches=0)
+        plt.axis("off")
+        show_points(plt.gca(), [x, y], 1, size=(width * 0.04) ** 2)
+        plt.savefig(img_points_p, bbox_inches="tight", pad_inches=0)
         show_mask(plt.gca(), mask, random_color=False)
-        plt.savefig(img_mask_p, bbox_inches='tight', pad_inches=0)
+        plt.savefig(img_mask_p, bbox_inches="tight", pad_inches=0)
         plt.close()
 
     print("Upload results to GCS")
     bucket = get_gcs_bucket()
 
-    file_names = [f for f in os.listdir(out_dir) if os.path.isfile(os.path.join(out_dir, f))]
+    file_names = [
+        f for f in os.listdir(out_dir) if os.path.isfile(os.path.join(out_dir, f))
+    ]
 
     try:
         upload_to_gcs(str(out_dir), str(image_id), bucket)
     except Exception as e:
         raise Exception(str(e))
 
-    print('Done')
+    print("Done")
 
     file_names = [
-        f"{BASE_GCS_URL}/{image_id}/{f}"
-        for f in file_names
-        if "with_mask" in f
+        f"{BASE_GCS_URL}/{image_id}/{f}" for f in file_names if "with_mask" in f
     ]
-    return {
-        "status": "success",
-        "files": file_names,
-        "image_id": image_id
-    }
+
+    return {"status": "success", "files": file_names, "image_id": image_id}
 
 
 # @isolated(requirements=requirements, machine_type="GPU", keep_alive=60)
 def edit_image(image_id, mask_id, prompt, extension):
     import sys
 
-    os.environ['TRANSFORMERS_CACHE'] = '/data/models'
-    os.environ['HF_HOME'] = '/data/models'
+    os.environ["TRANSFORMERS_CACHE"] = "/data/models"
+    os.environ["HF_HOME"] = "/data/models"
 
     sys.path.append(REPO_PATH)
     os.chdir(REPO_PATH)
 
-    from stable_diffusion_inpaint import replace_img_with_sd
     from utils import load_img_to_array, save_array_to_img
     from pathlib import Path
 
@@ -212,25 +282,25 @@ def edit_image(image_id, mask_id, prompt, extension):
 
     img_replaced_p = replaced_dir / f"replaced_with_{Path(mask_p).name}"
     img = load_img_to_array(f"./{input_img_name}")
-    img_replaced = replace_img_with_sd(
-        img, mask, prompt, device="cuda")
+    img_replaced = replace_img_with_sd(img, mask, prompt)
     save_array_to_img(img_replaced, img_replaced_p)
 
     print("Upload results to GCS")
     bucket = get_gcs_bucket()
 
-    file_names = [f for f in os.listdir(replaced_dir) if os.path.isfile(os.path.join(replaced_dir, f))]
+    file_names = [
+        f
+        for f in os.listdir(replaced_dir)
+        if os.path.isfile(os.path.join(replaced_dir, f))
+    ]
 
     try:
         upload_to_gcs(replaced_dir, image_id, bucket)
     except Exception as e:
         raise Exception(str(e))
 
-
     file_names = [
-        f"{BASE_GCS_URL}/{image_id}/{f}"
-        for f in file_names
-        if "with_mask" in f
+        f"{BASE_GCS_URL}/{image_id}/{f}" for f in file_names if "with_mask" in f
     ]
 
     return {
@@ -238,14 +308,16 @@ def edit_image(image_id, mask_id, prompt, extension):
         "files": file_names,
     }
 
+
 # ------ Flask app ------
+
 
 @isolated(
     requirements=requirements,
     machine_type="GPU",
     # machine_type="M",
-    keep_alive=60,
-    exposed_port=8080
+    keep_alive=300,
+    exposed_port=8080,
 )
 def app():
     from flask import Flask, jsonify, request
@@ -261,7 +333,7 @@ def app():
         extension = data["extension"]
 
         result = make_masks(image, extension, x, y)
-        return jsonify({ "result": result })
+        return jsonify({"result": result})
 
     @app.route("/edit", methods=["POST"])
     def edit():
@@ -272,6 +344,6 @@ def app():
         extension = data["extension"]
 
         result = edit_image(image_id, mask_id, prompt, extension)
-        return jsonify({ "result": result })
+        return jsonify({"result": result})
 
     app.run(host="0.0.0.0", port=8080)
