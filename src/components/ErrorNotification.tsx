@@ -13,20 +13,18 @@ export default function ErrorNotification(props: ErrorNotificationProps) {
     onDismiss?.call(null);
   }, [onDismiss]);
   return (
-    <div className="toast toast-top toast-center w-full md:w-auto md:toast-end">
+    <div className="toast toast-top toast-center w-full md:w-auto md:toast-end p-2 md:p-4">
       <div
-        className="alert alert-error rounded-md space-y-2 md:space-y-4"
+        className="alert alert-error rounded-md shadow-md space-y-2 md:space-y-4 flex-column items-start"
         onClick={handleDismiss}
       >
-        <div>
+        <div className="items-start">
           <XCircleIcon className="flex-shrink-0 h-6 w-6" />
-          <span>{message}</span>
-        </div>
-        {details && (
           <div>
-            <span>{details}</span>
+            <p className="font-semibold">{message}</p>
+            {details && <p>{details}</p>}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
