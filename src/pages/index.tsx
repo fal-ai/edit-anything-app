@@ -9,6 +9,7 @@ import ImageMask from "@/components/ImageMask";
 import ImageSelector, { ImageFile } from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
 import Steps, { StepName } from "@/components/Steps";
+import ImageCountDisplay from "@/components/ImageCountDisplay";
 
 type ErrorMessage = {
   message: string;
@@ -26,7 +27,8 @@ const Home = () => {
   const [prompt, setPrompt] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isLoading, setLoading] = useState(false);
-
+  const [number, setNumber] = useState(0);
+  
   const reset = () => {
     setStep(StepName.ChooseImage);
     setError(null);
@@ -42,7 +44,10 @@ const Home = () => {
 
   useEffect(() => {
     setError(null);
-  }, [step, selectedImage, position, selectedMask]);
+    getNumberOfImages().then((data) => {
+      setNumber(data["numberOfImages"]);
+    });
+  }, [step, selectedImage, position, selectedMask, number]);
 
   const dismissError = () => {
     setError(null);
@@ -146,13 +151,29 @@ const Home = () => {
     }
   };
 
+  async function getNumberOfImages() {
+    const response = await fetch("/api/images", {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            "content-type": "application/json",
+          }
+        });
+    return await response.json();
+  }
+
+
   const hasPrompt = prompt && prompt.trim().length > 0;
 
+   
   return (
     <main className="min-h-screen md:py-12">
       <Head>
         <title>Edit Anything | fal-serverless</title>
       </Head>
+      <div>
+        <ImageCountDisplay count={number} />
+      </div>
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
         <div className="hidden md:display md:col-span-3">
           <Card>

@@ -1,5 +1,6 @@
 import fetch from "cross-fetch";
 import type { NextApiHandler } from "next";
+import kv from "@vercel/kv";
 
 const EDIT_FUNCTION_URL = process.env.EDIT_FUNCTION_URL;
 
@@ -12,6 +13,7 @@ const handler: NextApiHandler = async (request, response) => {
     response.status(500).json({ message: "EDIT_FUNCTION_URL not set" });
     return;
   }
+
   const res = await fetch(EDIT_FUNCTION_URL, {
     method: "POST",
     body: JSON.stringify(request.body),
@@ -25,6 +27,7 @@ const handler: NextApiHandler = async (request, response) => {
     response.status(res.status).send(res.statusText);
     return;
   }
+  kv.incr("numberOfImages")
   const { result } = await res.json();
   response.json(result);
 };
