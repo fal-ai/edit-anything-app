@@ -1,6 +1,6 @@
 import { Head, Html, Main, NextScript } from "next/document";
-import NavBar from "./_navbar";
 import Footer from "./_footer";
+import NavBar from "./_navbar";
 
 export default function Document() {
   return (
