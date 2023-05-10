@@ -3,5 +3,6 @@
 .next/
 .vercel/
 node_modules/
+serverless/
 /dist
 /coverage

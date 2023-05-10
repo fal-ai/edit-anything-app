@@ -205,7 +205,9 @@ const Home = () => {
                     disabled={isLoading || !selectedImage || !position}
                     onClick={generateMasks}
                   >
-                    { position ? "Generate masks" : "Set the mask reference point"}  
+                    {position
+                      ? "Generate masks"
+                      : "Set the mask reference point"}
                   </button>
                 </div>
               </div>
@@ -253,7 +255,7 @@ const Home = () => {
               disabled={isLoading || !selectedMask || !hasPrompt}
               onClick={handleGenerate}
             >
-              { selectedMask ? "Generate" : "Pick one of the mask options" }
+              {selectedMask ? "Generate" : "Pick one of the mask options"}
             </button>
           </div>
           {imageUrls.length === 0 && (

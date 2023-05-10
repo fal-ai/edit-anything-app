@@ -18,7 +18,7 @@ export interface ImageSelectorProps {
   onImageSelect: OnImageSelect;
 }
 
-const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export default function ImageSelector(props: ImageSelectorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -99,7 +99,7 @@ export default function ImageSelector(props: ImageSelectorProps) {
 
   return (
     <>
-      <label
+      <div
         {...getRootProps()}
         className="hidden md:display md:flex justify-center w-full h-fill px-4 py-16 transition bg-base-100 bg-opacity-30 border-2 dark:border-base-100 border-dashed rounded-md appearance-none cursor-pointer focus:outline-none"
       >
@@ -122,7 +122,7 @@ export default function ImageSelector(props: ImageSelectorProps) {
           className="hidden"
           disabled={props.disabled}
         />
-      </label>
+      </div>
       <input
         id="file_input"
         type="file"
