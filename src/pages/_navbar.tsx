@@ -1,3 +1,5 @@
+import GitHubIcon from "@/components/GitHubIcon";
+
 export default function NavBar() {
   return (
     <div className="navbar bg-base-300">
@@ -22,7 +24,15 @@ export default function NavBar() {
             </a>
           </span>
         </div>
-        <div className="flex-none"></div>
+        <div className="flex">
+          <a
+            href="https://github.com/fal-ai/edit-anything-app"
+            target="_blank"
+            className="opacity-40 hover:opacity-70 dark:opacity-60 dark:hover:opacity-90 transition-opacity duration-200 pe-2 md:pe-0"
+          >
+            <GitHubIcon />
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { Head, Html, Main, NextScript } from "next/document";
 import NavBar from "./_navbar";
-import GithubCorner from "./_github_corner";
+import Footer from "./_footer";
 
 export default function Document() {
   return (
@@ -8,8 +8,8 @@ export default function Document() {
       <Head />
       <body className="theme bg-base-300">
         <NavBar />
-        <GithubCorner url="//github.com/fal-ai/edit-anything-app" />
         <Main />
+        <Footer />
         <NextScript />
       </body>
     </Html>

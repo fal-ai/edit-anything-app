@@ -1,5 +1,9 @@
 # edit anything with fal serverless
 
+This is a reference implementation of a Next.js and fal-serverless, to demonstrate how ML models running on serverless GPUs can be used within a web application using Next.js. You can also see a [video about it here](https://youtu.be/ob_WOogJn_A).
+
+You can see a live demo on [editanything.ai](https://editanything.ai). In case you want to run the project yourself, follow the instructions below.
+
 ## Getting started
 ### Prerequisites
 - Python >=3.8
@@ -65,6 +69,20 @@ EDIT_FUNCTION_URL=edit_endpoint_url
 npm run dev
 ```
 
-## TODO:
-- Build UI app with Next.js
-- Automated deployment
+## Contributing
+
+Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1. Make sure you read our [Code of Conduct](https://github.com/fal-ai/edit-anything-app/blob/main/CODE_OF_CONDUCT.md)
+2. Fork the project and clone your fork
+3. Setup the local environment with `npm install`
+4. Create a feature branch (`git checkout -b feature/add-cool-thing`) or a bugfix branch (`git checkout -b fix/smash-that-bug`)
+5. Commit the changes (`git commit -m 'feat(client): added a cool thing'`) - use [conventional commits](https://conventionalcommits.org)
+6. Push to the branch (`git push --set-upstream origin feature/add-cool-thing`)
+7. Open a Pull Request
+
+Check the [good first issue queue](https://github.com/fal-ai/edit-anything-app/labels/good+first+issue), your contribution will be welcome!
+
+## License
+
+Distributed under the Apache-2.0 License. See [LICENSE](https://github.com/fal-ai/edit-anything-app/blob/main/LICENSE) for more information.

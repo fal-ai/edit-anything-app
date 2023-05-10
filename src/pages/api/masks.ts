@@ -4,7 +4,7 @@ import type { NextApiHandler, PageConfig } from "next";
 const MASK_FUNCTION_URL = process.env.MASK_FUNCTION_URL;
 const handler: NextApiHandler = async (request, response) => {
   return;
-}
+};
 //   if (request.method !== "POST" && request.method !== "OPTIONS") {
 //     response.status(405).json({ message: "Method not allowed" });
 //     return;
