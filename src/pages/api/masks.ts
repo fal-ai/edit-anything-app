@@ -1,5 +1,6 @@
 import fetch from "cross-fetch";
 import type { NextApiHandler, PageConfig } from "next";
+import kv from "@vercel/kv";
 
 const MASK_FUNCTION_URL = process.env.MASK_FUNCTION_URL;
 const handler: NextApiHandler = async (request, response) => {
@@ -24,6 +25,7 @@ const handler: NextApiHandler = async (request, response) => {
     response.status(res.status).send(res.statusText);
     return;
   }
+  kv.incrby("numberOfImages", 3)
   const { result } = await res.json();
   response.json(result);
 };
