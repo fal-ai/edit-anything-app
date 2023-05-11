@@ -2,7 +2,7 @@ import GitHubIcon from "@/components/GitHubIcon";
 
 export default function Footer() {
   return (
-    <footer className="footer footer-center p-4 container mx-auto">
+    <footer className="footer footer-center p-4 container mx-auto gap-2 md:gap-4">
       <div className="prose">
         <p>
           Copyright © 2023 - All right reserved -{" "}
