@@ -27,7 +27,7 @@ const handler: NextApiHandler = async (request, response) => {
     response.status(res.status).send(res.statusText);
     return;
   }
-  kv.incr("numberOfImages")
+  kv.incr("numberOfImages");
   const { result } = await res.json();
   response.json(result);
 };

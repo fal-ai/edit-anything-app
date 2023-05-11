@@ -28,7 +28,7 @@ const Home = () => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isLoading, setLoading] = useState(false);
   const [number, setNumber] = useState(0);
-  
+
   const reset = () => {
     setStep(StepName.ChooseImage);
     setError(null);
@@ -153,19 +153,17 @@ const Home = () => {
 
   async function getNumberOfImages() {
     const response = await fetch("/api/images", {
-          method: "GET",
-          headers: {
-            accept: "application/json",
-            "content-type": "application/json",
-          }
-        });
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+    });
     return await response.json();
   }
 
-
   const hasPrompt = prompt && prompt.trim().length > 0;
 
-   
   return (
     <main className="min-h-screen md:py-12">
       <Head>
