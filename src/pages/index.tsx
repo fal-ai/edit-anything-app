@@ -28,6 +28,7 @@ const Home = () => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isLoading, setLoading] = useState(false);
   const [number, setNumber] = useState(0);
+  const [dilation, setDilation] = useState(0);
 
   const reset = () => {
     setStep(StepName.ChooseImage);
@@ -83,6 +84,7 @@ const Home = () => {
           extension: "." + selectedImage.filename.split(".").pop(),
           x: position.x,
           y: position.y,
+          dilation: parseInt(dilation)
         }),
       });
 
@@ -213,7 +215,20 @@ const Home = () => {
         </div>
         <div className="md:col-span-1">
           <Card title="Masks" classNames="min-h-full">
-            {masks.length === 0 && (
+            <label>
+              Dilation:
+              <input
+                id="mask_dilation"
+                type="number"
+                name="dilation"
+                value={dilation}
+                onChange={(e) => setDilation(e.target.value)}
+                className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
+                disabled={isLoading}
+              />
+            </label>
+
+	          {masks.length === 0 && (
               <div className="items-center mt-0 md:mt-12">
                 <div className="hidden md:display">
                   <EmptyMessage message="No masks generated yet" />
@@ -247,6 +262,15 @@ const Home = () => {
                     />
                   ))}
                 </div>
+		            <button
+                  className="btn btn-primary max-sm:btn-wide mb-4 md:mb-0"
+                  disabled={isLoading || !selectedImage || !position}
+                  onClick={generateMasks}
+                >
+                  {position
+                    ? "Regenerate"
+                    : "Set the mask reference point"}
+                </button>
               </>
             )}
           </Card>
