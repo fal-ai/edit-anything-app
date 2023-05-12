@@ -9,12 +9,12 @@ export default function NavBar() {
             className="text-lg normal-case tracking-wide ps-2 md:ps-0"
             href="#"
           >
-            <span className="dark:text-white font-light">
+            <span className="whitespace-nowrap dark:text-white font-light">
               edit
               <span className="text-secondary font-normal">anything</span>
             </span>
           </a>
-          <span className="text-xs md:text-sm whitespace-nowrap font-light md:ms-1 max-md:ps-2 inline-block">
+          <span className="text-xs md:text-sm whitespace-nowrap font-light md:ms-1 max-md:ps-2 inline-block mr-6">
             <span className="opacity-70">model inference provided by </span>
             <a
               className="link font-medium opacity-70 hover:opacity-100 transition-opacity duration-200"
