@@ -11,16 +11,15 @@ export default function NavBar() {
           >
             <span className="whitespace-nowrap dark:text-white font-light">
               edit
-              <span className="text-secondary font-normal">anything</span>
+              <span className="text-secondary font-normal">anything - </span>
             </span>
           </a>
-          <span className="text-xs whitespace-nowrap dark:text-white font-light ms-1 opacity-40">
-            powered by{" "}
+          <span className="text-m whitespace-nowrap dark:text-white font-light ms-1">
             <a
               className="link link-hover hover:opacity-100"
               href="https://docs.fal.ai/fal-serverless/quickstart"
             >
-              fal-serverless
+              model inference provided by fal-serverless
             </a>
           </span>
         </div>
