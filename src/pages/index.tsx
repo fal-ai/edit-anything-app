@@ -5,11 +5,11 @@ import { useEffect, useState } from "react";
 import Card from "@/components/Card";
 import EmptyMessage from "@/components/EmptyMessage";
 import ErrorNotification from "@/components/ErrorNotification";
+import ImageCountDisplay from "@/components/ImageCountDisplay";
 import ImageMask from "@/components/ImageMask";
 import ImageSelector, { ImageFile } from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
 import Steps, { StepName } from "@/components/Steps";
-import ImageCountDisplay from "@/components/ImageCountDisplay";
 
 type ErrorMessage = {
   message: string;

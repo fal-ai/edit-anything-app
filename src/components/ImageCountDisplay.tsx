@@ -13,7 +13,9 @@ export default function EmptyMessage(props: ImageCountDisplayProps) {
             Number of Images Created -
             <CountUp start={props.count - 5} end={props.count} />
           </div>
-        ) : ""}
+        ) : (
+          ""
+        )}
       </p>
     </div>
   );

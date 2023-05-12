@@ -4,22 +4,23 @@ export default function NavBar() {
   return (
     <div className="navbar bg-base-300">
       <div className="container mx-auto">
-        <div className="flex-1">
+        <div className="flex-1 max-md:flex-col">
           <a
             className="text-lg normal-case tracking-wide ps-2 md:ps-0"
             href="#"
           >
             <span className="whitespace-nowrap dark:text-white font-light">
               edit
-              <span className="text-secondary font-normal">anything - </span>
+              <span className="text-secondary font-normal">anything</span>
             </span>
           </a>
-          <span className="text-m whitespace-nowrap dark:text-white font-light ms-1">
+          <span className="text-xs md:text-sm whitespace-nowrap font-light md:ms-1 max-md:ps-2 inline-block">
+            <span className="opacity-70">model inference provided by </span>
             <a
-              className="link"
+              className="link font-medium opacity-70 hover:opacity-100 transition-opacity duration-200"
               href="https://docs.fal.ai/fal-serverless/quickstart"
             >
-              model inference provided by fal-serverless
+              fal-serverless
             </a>
           </span>
         </div>

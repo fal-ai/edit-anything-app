@@ -1,8 +1,8 @@
+import { getImageCount } from "@/data/storage";
 import type { NextApiHandler } from "next";
-import kv from "@vercel/kv";
 
 const handler: NextApiHandler = async (request, response) => {
-  const numberOfImages = await kv.get("numberOfImages");
+  const numberOfImages = await getImageCount();
   return response.json({ numberOfImages });
 };
 

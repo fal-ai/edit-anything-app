@@ -1,6 +1,6 @@
+import { incrementImageCount } from "@/data/storage";
 import fetch from "cross-fetch";
 import type { NextApiHandler } from "next";
-import kv from "@vercel/kv";
 
 const EDIT_FUNCTION_URL = process.env.EDIT_FUNCTION_URL;
 
@@ -27,7 +27,7 @@ const handler: NextApiHandler = async (request, response) => {
     response.status(res.status).send(res.statusText);
     return;
   }
-  kv.incr("numberOfImages");
+  await incrementImageCount();
   const { result } = await res.json();
   response.json(result);
 };
