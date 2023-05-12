@@ -16,7 +16,7 @@ export default function NavBar() {
           </a>
           <span className="text-m whitespace-nowrap dark:text-white font-light ms-1">
             <a
-              className="link link-hover hover:opacity-100"
+              className="link"
               href="https://docs.fal.ai/fal-serverless/quickstart"
             >
               model inference provided by fal-serverless
