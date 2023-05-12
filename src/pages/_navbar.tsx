@@ -9,7 +9,7 @@ export default function NavBar() {
             className="text-lg normal-case tracking-wide ps-2 md:ps-0"
             href="#"
           >
-            <span className="whitespace-nowrap dark:text-white font-light">
+            <span className="dark:text-white font-light">
               edit
               <span className="text-secondary font-normal">anything</span>
             </span>
