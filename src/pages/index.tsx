@@ -111,145 +111,88 @@ const Home = () => {
     setStep(StepName.DefinePrompt);
   };
 
-  const handleRemove = async () => {
+  const validateInputs = (): string | null => {
+    if (!selectedImage || !position || !selectedMask) {
+      return "You must add an image and select a mask before.";
+    }
+
+    const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
+    if (!maskId) {
+      return "Failed to extract mask id from mask url";
+    }
+
+    return null;
+  };
+
+  const fetchData = async (apiPath: string, body: object) => {
+    const response = await fetch(apiPath, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const timestamp = Date.now();
+    const images = data.files.map(
+      (imageUrl: string) => `${imageUrl}?t=${timestamp}`
+    );
+    return images;
+  };
+
+  const handleAction = async (apiPath: string, body: object, setImageUrls: Function) => {
     setLoading(true);
     try {
-	    if (!selectedImage || !position || !selectedMask) {
-	      setError({
-		      message: "You must add an image and select a mask before.",
-	      });
-	      return;
-	    }
+      const validationError = validateInputs();
+      if (validationError) {
+        setError({ message: validationError });
+        return;
+      }
 
-	    // extract the maskId from the mask url using the with_mask_(\d+) pattern
-	    const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
-	    if (!maskId) {
-	      setError({ message: "Failed to extract mask id from mask url" });
-	      return;
-	    }
-	    const response = await fetch("/api/remove", {
-	      method: "POST",
-	      headers: {
-		      accept: "application/json",
-		      "content-type": "application/json",
-	      },
-	      body: JSON.stringify({
-		      image_id: imageId,
-		      extension: "." + selectedImage.filename.split(".").pop(),
-		      mask_id: maskId,
-	      }),
-	    });
-
-	    if (!response.ok) {
-	      throw new Error(`Request failed with status ${response.status}`);
-	    }
-	    const data = await response.json();
-	    const timestamp = Date.now();
-	    const images = data.files.map(
-	      (imageUrl: string) => `${imageUrl}?t=${timestamp}`
-	    );
-	    setRemovedImageUrls(images);
-	    setStep(StepName.Generate);
+      const images = await fetchData(apiPath, body);
+      setImageUrls(images);
+      setStep(StepName.Generate);
     } catch (e: any) {
-	    setError({ message: "Failed to generate images", details: e.message });
+      setError({ message: "Failed to generate images", details: e.message });
     } finally {
-	    setLoading(false);
+      setLoading(false);
     }
-  }
+  };
+
+  const handleRemove = async () => {
+    const body = {
+      image_id: imageId,
+      extension: "." + selectedImage.filename.split(".").pop(),
+      mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+    };
+    await handleAction("/api/remove", body, setRemovedImageUrls);
+  };
 
   const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      if (!selectedImage || !position || !selectedMask) {
-        setError({
-          message: "You must add an image and select a mask before.",
-        });
-        return;
-      }
-      // extract the maskId from the mask url using the with_mask_(\d+) pattern
-      const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
-      if (!maskId) {
-        setError({ message: "Failed to extract mask id from mask url" });
-        return;
-      }
-      const response = await fetch("/api/edit", {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          image_id: imageId,
-          extension: "." + selectedImage.filename.split(".").pop(),
-          mask_id: maskId,
-          prompt,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
-      const data = await response.json();
-      const timestamp = Date.now();
-      const images = data.files.map(
-        (imageUrl: string) => `${imageUrl}?t=${timestamp}`
-      );
-      setReplacedImageUrls(images);
-      setStep(StepName.Generate);
-    } catch (e: any) {
-      setError({ message: "Failed to generate images", details: e.message });
-    } finally {
-      setLoading(false);
-    }
+    const body = {
+      image_id: imageId,
+      extension: "." + selectedImage.filename.split(".").pop(),
+      mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+      prompt,
+    };
+    await handleAction("/api/edit", body, setReplacedImageUrls);
   };
-
 
   const handleFill = async () => {
-    setLoading(true);
-    try {
-      if (!selectedImage || !position || !selectedMask) {
-        setError({
-          message: "You must add an image and select a mask before.",
-        });
-        return;
-      }
-      // extract the maskId from the mask url using the with_mask_(\d+) pattern
-      const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
-      if (!maskId) {
-        setError({ message: "Failed to extract mask id from mask url" });
-        return;
-      }
-      const response = await fetch("/api/fill", {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          image_id: imageId,
-          extension: "." + selectedImage.filename.split(".").pop(),
-          mask_id: maskId,
-          prompt: fillPrompt,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
-      const data = await response.json();
-      const timestamp = Date.now();
-      const images = data.files.map(
-        (imageUrl: string) => `${imageUrl}?t=${timestamp}`
-      );
-      setFilledImageUrls(images);
-      setStep(StepName.Generate);
-    } catch (e: any) {
-      setError({ message: "Failed to generate images", details: e.message });
-    } finally {
-      setLoading(false);
-    }
+    const body = {
+      image_id: imageId,
+      extension: "." + selectedImage.filename.split(".").pop(),
+      mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+      prompt: fillPrompt,
+    };
+    await handleAction("/api/fill", body, setFilledImageUrls);
   };
-
 
   async function getNumberOfImages() {
     const response = await fetch("/api/images", {
