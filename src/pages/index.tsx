@@ -25,9 +25,11 @@ const Home = () => {
   const [masks, setMasks] = useState<string[]>([]);
   const [selectedMask, setSelectedMask] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [replacedImageUrls, setReplacedImageUrls] = useState<string[]>([]);
+  const [removedImageUrls, setRemovedImageUrls] = useState<string[]>([]);
   const [isLoading, setLoading] = useState(false);
   const [number, setNumber] = useState(0);
+  const [dilation, setDilation] = useState(0);
 
   const reset = () => {
     setStep(StepName.ChooseImage);
@@ -38,7 +40,8 @@ const Home = () => {
     setMasks([]);
     setSelectedMask(null);
     setPrompt("");
-    setImageUrls([]);
+    setReplacedImageUrls([]);
+    setRemovedImageUrls([]);
     setLoading(false);
   };
 
@@ -83,6 +86,7 @@ const Home = () => {
           extension: "." + selectedImage.filename.split(".").pop(),
           x: position.x,
           y: position.y,
+          dilation: parseInt(dilation)
         }),
       });
 
@@ -104,6 +108,52 @@ const Home = () => {
     setSelectedMask(mask);
     setStep(StepName.DefinePrompt);
   };
+
+  const handleRemove = async () => {
+    setLoading(true);
+    try {
+	    if (!selectedImage || !position || !selectedMask) {
+	      setError({
+		      message: "You must add an image and select a mask before.",
+	      });
+	      return;
+	    }
+
+	    // extract the maskId from the mask url using the with_mask_(\d+) pattern
+	    const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
+	    if (!maskId) {
+	      setError({ message: "Failed to extract mask id from mask url" });
+	      return;
+	    }
+	    const response = await fetch("/api/remove", {
+	      method: "POST",
+	      headers: {
+		      accept: "application/json",
+		      "content-type": "application/json",
+	      },
+	      body: JSON.stringify({
+		      image_id: imageId,
+		      extension: "." + selectedImage.filename.split(".").pop(),
+		      mask_id: maskId,
+	      }),
+	    });
+
+	    if (!response.ok) {
+	      throw new Error(`Request failed with status ${response.status}`);
+	    }
+	    const data = await response.json();
+	    const timestamp = Date.now();
+	    const images = data.files.map(
+	      (imageUrl: string) => `${imageUrl}?t=${timestamp}`
+	    );
+	    setRemovedImageUrls(images);
+	    setStep(StepName.Generate);
+    } catch (e: any) {
+	    setError({ message: "Failed to generate images", details: e.message });
+    } finally {
+	    setLoading(false);
+    }
+  }
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -142,7 +192,7 @@ const Home = () => {
       const images = data.files.map(
         (imageUrl: string) => `${imageUrl}?t=${timestamp}`
       );
-      setImageUrls(images);
+      setReplacedImageUrls(images);
       setStep(StepName.Generate);
     } catch (e: any) {
       setError({ message: "Failed to generate images", details: e.message });
@@ -213,7 +263,20 @@ const Home = () => {
         </div>
         <div className="md:col-span-1">
           <Card title="Masks" classNames="min-h-full">
-            {masks.length === 0 && (
+            <label>
+              Dilation:
+              <input
+                id="mask_dilation"
+                type="number"
+                name="dilation"
+                value={dilation}
+                onChange={(e) => setDilation(e.target.value)}
+                className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
+                disabled={isLoading}
+              />
+            </label>
+
+	          {masks.length === 0 && (
               <div className="items-center mt-0 md:mt-12">
                 <div className="hidden md:display">
                   <EmptyMessage message="No masks generated yet" />
@@ -231,6 +294,7 @@ const Home = () => {
                 </div>
               </div>
             )}
+
             {masks.length > 0 && (
               <>
                 <span className="font-light mb-0 inline-block opacity-70">
@@ -247,13 +311,54 @@ const Home = () => {
                     />
                   ))}
                 </div>
+		            <button
+                  className="btn btn-primary max-sm:btn-wide mb-4 md:mb-0"
+                  disabled={isLoading || !selectedImage || !position}
+                  onClick={generateMasks}
+                >
+                  {position
+                    ? "Regenerate"
+                    : "Set the mask reference point"}
+                </button>
               </>
             )}
           </Card>
         </div>
       </div>
       <div className="container mx-auto pt-8 w-full">
-        <Card title="Imagine...">
+        <Card title="Remove...">
+          <div className="flex flex-col md:flex-row md:space-x-6">
+	          <button
+              className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
+              disabled={isLoading || !selectedMask}
+              onClick={handleRemove}
+            >
+	            {selectedMask ? "Remove" : "Pick one of the mask options"}
+            </button>
+          </div>
+          {removedImageUrls.length === 0 && (
+            <div className="my-12">
+              <EmptyMessage message="Nothing to see just yet" />
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
+            {removedImageUrls.map((url, index) => (
+              <NextImage
+                key={index}
+                src={url}
+                alt={`Generated Image ${index + 1}`}
+                width={0}
+                height={0}
+                sizes="100vw"
+                style={{ width: "100%", height: "auto" }}
+                className="my-0"
+              />
+            ))}
+          </div>
+        </Card>
+      </div>
+      <div className="container mx-auto pt-8 w-full">
+        <Card title="Replace...">
           <div className="flex flex-col md:flex-row md:space-x-6">
             <div className="form-control w-full md:w-3/5 max-w-full">
               <label>
@@ -277,13 +382,13 @@ const Home = () => {
               {selectedMask ? "Generate" : "Pick one of the mask options"}
             </button>
           </div>
-          {imageUrls.length === 0 && (
+          {replacedImageUrls.length === 0 && (
             <div className="my-12">
               <EmptyMessage message="Nothing to see just yet" />
             </div>
           )}
           <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
-            {imageUrls.map((url, index) => (
+            {replacedImageUrls.map((url, index) => (
               <NextImage
                 key={index}
                 src={url}

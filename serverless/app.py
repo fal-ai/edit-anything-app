@@ -16,9 +16,15 @@ segment_anything_repo = (
 )
 
 MODEL_PATH = "/data/models/sam_vit_h_4b8939.pth"
+
 MODEL_URL = (
     "https://huggingface.co/spaces/facebook/ov-seg/resolve/main/sam_vit_h_4b8939.pth"
 )
+
+BIG_LAMA_URL = "https://huggingface.co/camenduru/big-lama/resolve/main/big-lama/models/best.ckpt"
+
+BIG_LAMA_CONFIG = "https://huggingface.co/camenduru/big-lama/raw/main/big-lama/config.yaml"
+
 
 requirements = [
     "flask",
@@ -33,7 +39,21 @@ requirements = [
     "opencv-python",
     "matplotlib",
     f"git+{segment_anything_repo}",
-    "google-cloud-storage",
+    "pyyaml",
+    "tqdm",
+    "easydict==1.9.0",
+    "scikit-learn==0.24.2",
+    "tensorflow",
+    "joblib",
+    "pandas",
+    "albumentations==0.5.2",
+    "hydra-core==1.1.0",
+    "pytorch-lightning==1.2.9",
+    "tabulate",
+    "kornia==0.5.0",
+    "webdataset",
+    "packaging",
+    "google-cloud-storage"
 ]
 
 
@@ -58,6 +78,17 @@ def download_model():
     if not os.path.exists(MODEL_PATH):
         print("Downloading SAM model.")
         os.system(f"cd /data/models && wget {MODEL_URL}")
+
+
+@cached
+def download_big_lama_model():
+    import os
+    if not os.path.exists("/data/models/big_lama/models"):
+        os.system("mkdir -p /data/models/big_lama/models")
+    if not os.path.exists('/data/models/big_lama/models/best.ckpt'):
+        print("Downloading Big Lama model.")
+        os.system(f"cd /data/models/big_lama && wget {BIG_LAMA_CONFIG}")
+        os.system(f"cd /data/models/big_lama/models && wget {BIG_LAMA_URL}")
 
 
 @cached
@@ -164,8 +195,7 @@ def replace_img_with_sd(img, mask, text_prompt: str, step: int = 50):
     return img_resized
 
 
-# @isolated(requirements=requirements, machine_type="GPU", keep_alive=60)
-def make_masks(image: str, extension: str, x: int, y: int):
+def make_masks(image: str, extension: str, x: int, y: int, dilation: int | None = None):
     import sys
     import numpy as np
     import io
@@ -187,7 +217,7 @@ def make_masks(image: str, extension: str, x: int, y: int):
     sys.path.append(REPO_PATH)
     os.chdir(REPO_PATH)
 
-    from utils import load_img_to_array, save_array_to_img, show_mask, show_points
+    from utils import load_img_to_array, save_array_to_img, show_mask, show_points, dilate_mask
 
     image_id = uuid.uuid4()
     print(f"image_id: {image_id}")
@@ -212,6 +242,7 @@ def make_masks(image: str, extension: str, x: int, y: int):
         ckpt_p="/data/models/sam_vit_h_4b8939.pth",
     )
     print("Done")
+
     masks = masks.astype(np.uint8) * 255
 
     img_stem = Path(f"./{input_img_name}").stem
@@ -220,6 +251,8 @@ def make_masks(image: str, extension: str, x: int, y: int):
 
     for i, mask in enumerate(masks):
         mask = masks[i]
+        if dilation:
+            mask = dilate_mask(mask, dilation)
         mask_p = out_dir / f"mask_{i}.png"
         img_points_p = out_dir / f"with_points.png"
         img_mask_p = out_dir / f"with_{Path(mask_p).name}"
@@ -260,7 +293,6 @@ def make_masks(image: str, extension: str, x: int, y: int):
     return {"status": "success", "files": file_names, "image_id": image_id}
 
 
-# @isolated(requirements=requirements, machine_type="GPU", keep_alive=60)
 def edit_image(image_id, mask_id, prompt, extension):
     import sys
 
@@ -309,13 +341,68 @@ def edit_image(image_id, mask_id, prompt, extension):
     }
 
 
+def remove_from_image(image_id, mask_id, extension):
+    import sys
+
+    os.environ['TRANSFORMERS_CACHE'] = '/data/models'
+    os.environ['HF_HOME'] = '/data/models'
+
+    download_big_lama_model()
+
+    sys.path.append(REPO_PATH)
+    os.chdir(REPO_PATH)
+
+    from utils import load_img_to_array, save_array_to_img
+    from lama_inpaint import inpaint_img_with_lama
+    from pathlib import Path
+
+    input_img_name = f"{image_id}{extension}"
+    out_dir = Path("/data/edit-results") / image_id
+    mask_p = out_dir / f"mask_{mask_id}.png"
+    mask = load_img_to_array(mask_p)
+    removed_dir = out_dir / "removed"
+    removed_dir.mkdir(parents=True, exist_ok=True)
+
+    img_removed_p = removed_dir / f"removed_with_{Path(mask_p).name}"
+    img = load_img_to_array(f"./{input_img_name}")
+    img_removed = inpaint_img_with_lama(
+        img,
+        mask,
+        "./lama/configs/prediction/default.yaml",
+        "/data/models/big_lama",
+        device="cuda")
+    save_array_to_img(img_removed, img_removed_p)
+
+    print("Upload results to GCS")
+    bucket = get_gcs_bucket()
+
+    file_names = [
+        f
+        for f in os.listdir(removed_dir)
+        if os.path.isfile(os.path.join(removed_dir, f))
+    ]
+
+    try:
+        upload_to_gcs(removed_dir, image_id, bucket)
+    except Exception as e:
+        raise Exception(str(e))
+
+    file_names = [
+        f"{BASE_GCS_URL}/{image_id}/{f}" for f in file_names if "with_mask" in f
+    ]
+
+    return {
+        "status": "success",
+        "files": file_names,
+    }
+
+
 # ------ Flask app ------
 
 
 @isolated(
     requirements=requirements,
     machine_type="GPU",
-    # machine_type="M",
     keep_alive=300,
     exposed_port=8080,
 )
@@ -330,9 +417,10 @@ def app():
         image = data["image"]
         x = data["x"]
         y = data["y"]
+        dilation = data["dilation"]
         extension = data["extension"]
 
-        result = make_masks(image, extension, x, y)
+        result = make_masks(image, extension, x, y, dilation)
         return jsonify({"result": result})
 
     @app.route("/edit", methods=["POST"])
@@ -345,5 +433,20 @@ def app():
 
         result = edit_image(image_id, mask_id, prompt, extension)
         return jsonify({"result": result})
+
+    @app.route("/remove", methods=["POST"])
+    def remove():
+        data = request.get_json()
+        image_id = data["image_id"]
+        mask_id = data["mask_id"]
+        extension = data["extension"]
+
+        result = remove_from_image(image_id, mask_id, extension)
+        return jsonify({"result": result})
+
+    @app.route("/test", methods=["POST"])
+    def test():
+        return jsonify({"result": "hello 3"})
+
 
     app.run(host="0.0.0.0", port=8080)
