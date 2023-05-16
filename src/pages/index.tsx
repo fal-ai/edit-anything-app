@@ -25,11 +25,14 @@ const Home = () => {
   const [masks, setMasks] = useState<string[]>([]);
   const [selectedMask, setSelectedMask] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [fillPrompt, setFillPrompt] = useState("");
   const [replacedImageUrls, setReplacedImageUrls] = useState<string[]>([]);
   const [removedImageUrls, setRemovedImageUrls] = useState<string[]>([]);
+  const [filledImageUrls, setFilledImageUrls] = useState<string[]>([]);
   const [isLoading, setLoading] = useState(false);
   const [number, setNumber] = useState(0);
   const [dilation, setDilation] = useState(0);
+  const [activeTab, setActiveTab] = useState("replace")
 
   const reset = () => {
     setStep(StepName.ChooseImage);
@@ -55,6 +58,8 @@ const Home = () => {
   const dismissError = () => {
     setError(null);
   };
+
+  const tabClass = (tabName) => activeTab === tabName ? 'btn btn-primary' : 'btn';
 
   const handleImageSelected = (image: ImageFile) => {
     setSelectedImage(image);
@@ -109,96 +114,87 @@ const Home = () => {
     setStep(StepName.DefinePrompt);
   };
 
-  const handleRemove = async () => {
-    setLoading(true);
-    try {
-	    if (!selectedImage || !position || !selectedMask) {
-	      setError({
-		      message: "You must add an image and select a mask before.",
-	      });
-	      return;
-	    }
-
-	    // extract the maskId from the mask url using the with_mask_(\d+) pattern
-	    const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
-	    if (!maskId) {
-	      setError({ message: "Failed to extract mask id from mask url" });
-	      return;
-	    }
-	    const response = await fetch("/api/remove", {
-	      method: "POST",
-	      headers: {
-		      accept: "application/json",
-		      "content-type": "application/json",
-	      },
-	      body: JSON.stringify({
-		      image_id: imageId,
-		      extension: "." + selectedImage.filename.split(".").pop(),
-		      mask_id: maskId,
-	      }),
-	    });
-
-	    if (!response.ok) {
-	      throw new Error(`Request failed with status ${response.status}`);
-	    }
-	    const data = await response.json();
-	    const timestamp = Date.now();
-	    const images = data.files.map(
-	      (imageUrl: string) => `${imageUrl}?t=${timestamp}`
-	    );
-	    setRemovedImageUrls(images);
-	    setStep(StepName.Generate);
-    } catch (e: any) {
-	    setError({ message: "Failed to generate images", details: e.message });
-    } finally {
-	    setLoading(false);
+  const validateInputs = (): string | null => {
+    if (!selectedImage || !position || !selectedMask) {
+      return "You must add an image and select a mask before.";
     }
-  }
 
-  const handleGenerate = async () => {
+    const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
+    if (!maskId) {
+      return "Failed to extract mask id from mask url";
+    }
+
+    return null;
+  };
+
+  const fetchData = async (apiPath: string, body: object) => {
+    const response = await fetch(apiPath, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const timestamp = Date.now();
+    const images = data.files.map(
+      (imageUrl: string) => `${imageUrl}?t=${timestamp}`
+    );
+    return images;
+  };
+
+  const handleAction = async (apiPath: string, body: object, setImageUrls: Function) => {
     setLoading(true);
     try {
-      if (!selectedImage || !position || !selectedMask) {
-        setError({
-          message: "You must add an image and select a mask before.",
-        });
+      const validationError = validateInputs();
+      if (validationError) {
+        setError({ message: validationError });
         return;
       }
-      // extract the maskId from the mask url using the with_mask_(\d+) pattern
-      const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
-      if (!maskId) {
-        setError({ message: "Failed to extract mask id from mask url" });
-        return;
-      }
-      const response = await fetch("/api/edit", {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          image_id: imageId,
-          extension: "." + selectedImage.filename.split(".").pop(),
-          mask_id: maskId,
-          prompt,
-        }),
-      });
 
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
-      const data = await response.json();
-      const timestamp = Date.now();
-      const images = data.files.map(
-        (imageUrl: string) => `${imageUrl}?t=${timestamp}`
-      );
-      setReplacedImageUrls(images);
+      const images = await fetchData(apiPath, body);
+      setImageUrls(images);
       setStep(StepName.Generate);
     } catch (e: any) {
       setError({ message: "Failed to generate images", details: e.message });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRemove = async () => {
+    const body = {
+      image_id: imageId,
+      extension: "." + selectedImage.filename.split(".").pop(),
+      mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+    };
+    await handleAction("/api/remove", body, setRemovedImageUrls);
+  };
+
+  const handleGenerate = async () => {
+    const body = {
+      image_id: imageId,
+      extension: "." + selectedImage.filename.split(".").pop(),
+      mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+      prompt,
+    };
+    await handleAction("/api/edit", body, setReplacedImageUrls);
+  };
+
+  const handleFill = async () => {
+    const body = {
+      image_id: imageId,
+      extension: "." + selectedImage.filename.split(".").pop(),
+      mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+      prompt: fillPrompt,
+    };
+    await handleAction("/api/fill", body, setFilledImageUrls);
   };
 
   async function getNumberOfImages() {
@@ -213,6 +209,8 @@ const Home = () => {
   }
 
   const hasPrompt = prompt && prompt.trim().length > 0;
+
+  const hasFillPrompt = fillPrompt && fillPrompt.trim().length > 0;
 
   return (
     <main className="min-h-screen md:py-12">
@@ -325,38 +323,27 @@ const Home = () => {
           </Card>
         </div>
       </div>
-      <div className="container mx-auto pt-8 w-full">
-        <Card title="Remove...">
-          <div className="flex flex-col md:flex-row md:space-x-6">
-	          <button
-              className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
-              disabled={isLoading || !selectedMask}
-              onClick={handleRemove}
-            >
-	            {selectedMask ? "Remove" : "Pick one of the mask options"}
-            </button>
-          </div>
-          {removedImageUrls.length === 0 && (
-            <div className="my-12">
-              <EmptyMessage message="Nothing to see just yet" />
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
-            {removedImageUrls.map((url, index) => (
-              <NextImage
-                key={index}
-                src={url}
-                alt={`Generated Image ${index + 1}`}
-                width={0}
-                height={0}
-                sizes="100vw"
-                style={{ width: "100%", height: "auto" }}
-                className="my-0"
-              />
-            ))}
-          </div>
-        </Card>
+      <div className="flex container mx-auto pt-8 w-full">
+        <button
+          onClick={() => setActiveTab('replace')}
+          className={`btn ${tabClass('replace')} mx-2`}
+        >
+          Replace
+        </button>
+        <button
+          onClick={() => setActiveTab('remove')}
+          className={`btn ${tabClass('remove')} mx-2`}
+        >
+          Remove
+        </button>
+        <button
+          onClick={() => setActiveTab('fill')}
+          className={`btn ${tabClass('fill')} mx-2`}
+        >
+          Fill
+        </button>
       </div>
+      {activeTab === 'replace' && (
       <div className="container mx-auto pt-8 w-full">
         <Card title="Replace...">
           <div className="flex flex-col md:flex-row md:space-x-6">
@@ -403,6 +390,90 @@ const Home = () => {
           </div>
         </Card>
       </div>
+      )}
+      {activeTab === 'remove' && (
+        <div className="container mx-auto pt-8 w-full">
+        <Card title="Remove...">
+          <div className="flex flex-col md:flex-row md:space-x-6">
+	          <button
+              className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
+              disabled={isLoading || !selectedMask}
+              onClick={handleRemove}
+            >
+	            {selectedMask ? "Remove" : "Pick one of the mask options"}
+            </button>
+          </div>
+          {removedImageUrls.length === 0 && (
+            <div className="my-12">
+              <EmptyMessage message="Nothing to see just yet" />
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
+            {removedImageUrls.map((url, index) => (
+              <NextImage
+                key={index}
+                src={url}
+                alt={`Generated Image ${index + 1}`}
+                width={0}
+                height={0}
+                sizes="100vw"
+                style={{ width: "100%", height: "auto" }}
+                className="my-0"
+              />
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      )}
+      {activeTab === 'fill' && (
+      <div className="container mx-auto pt-8 w-full">
+        <Card title="Fill...">
+          <div className="flex flex-col md:flex-row md:space-x-6">
+            <div className="form-control w-full md:w-3/5 max-w-full">
+              <label>
+                <input
+                  id="fill_prompt_input"
+                  type="text"
+                  name="fill_prompt"
+                  value={fillPrompt}
+                  onChange={(e) => setFillPrompt(e.target.value)}
+                  placeholder="something creative, like 'an alien'"
+                  className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
+                  disabled={isLoading}
+                />
+              </label>
+            </div>
+	          <button
+              className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
+              disabled={isLoading || !selectedMask || !hasFillPrompt}
+              onClick={handleFill}
+            >
+	            {selectedMask ? "Fill" : "Pick one of the mask options"}
+            </button>
+          </div>
+          {filledImageUrls.length === 0 && (
+            <div className="my-12">
+              <EmptyMessage message="Nothing to see just yet" />
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
+            {filledImageUrls.map((url, index) => (
+              <NextImage
+                key={index}
+                src={url}
+                alt={`Generated Image ${index + 1}`}
+                width={0}
+                height={0}
+                sizes="100vw"
+                style={{ width: "100%", height: "auto" }}
+                className="my-0"
+              />
+            ))}
+          </div>
+        </Card>
+      </div>
+      )}
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="alert max-w-md shadow-lg p-6 md:p-12 mx-4 md:mx-0">

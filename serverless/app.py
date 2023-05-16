@@ -195,6 +195,21 @@ def replace_img_with_sd(img, mask, text_prompt: str, step: int = 50):
     return img_resized
 
 
+def fill_img_with_sd(img, mask, text_prompt):
+    import numpy as np
+    import PIL.Image as Image
+    from utils.mask_processing import crop_for_filling_pre, crop_for_filling_post
+    pipe = stable_diffusion_pipe()
+    img_crop, mask_crop = crop_for_filling_pre(img, mask)
+    img_crop_filled = pipe(
+        prompt=text_prompt,
+        image=Image.fromarray(img_crop),
+        mask_image=Image.fromarray(mask_crop)
+    ).images[0]
+    img_filled = crop_for_filling_post(img, mask, np.array(img_crop_filled))
+    return img_filled
+
+
 def make_masks(image: str, extension: str, x: int, y: int, dilation: int | None = None):
     import sys
     import numpy as np
@@ -397,6 +412,52 @@ def remove_from_image(image_id, mask_id, extension):
     }
 
 
+def fill_image(image_id, mask_id, prompt, extension):
+    import sys
+
+    os.environ["TRANSFORMERS_CACHE"] = "/data/models"
+    os.environ["HF_HOME"] = "/data/models"
+
+    sys.path.append(REPO_PATH)
+    os.chdir(REPO_PATH)
+
+    from utils import load_img_to_array, save_array_to_img
+    from pathlib import Path
+
+    input_img_name = f"{image_id}{extension}"
+    out_dir = Path("/data/edit-results") / image_id
+    mask_p = out_dir / f"mask_{mask_id}.png"
+    mask = load_img_to_array(mask_p)
+    filled_dir = out_dir / "filled"
+    filled_dir.mkdir(parents=True, exist_ok=True)
+
+    img_filled_p = filled_dir / f"filled_with_{Path(mask_p).name}"
+    img = load_img_to_array(f"./{input_img_name}")
+    img_filled = fill_img_with_sd(img, mask, prompt)
+    save_array_to_img(img_filled, img_filled_p)
+
+    print("Upload results to GCS")
+    bucket = get_gcs_bucket()
+
+    file_names = [
+        f
+        for f in os.listdir(filled_dir)
+        if os.path.isfile(os.path.join(filled_dir, f))
+    ]
+
+    try:
+        upload_to_gcs(filled_dir, image_id, bucket)
+    except Exception as e:
+        raise Exception(str(e))
+
+    file_names = [
+        f"{BASE_GCS_URL}/{image_id}/{f}" for f in file_names if "with_mask" in f
+    ]
+
+    return {
+        "status": "success",
+        "files": file_names,
+    }
 # ------ Flask app ------
 
 
@@ -434,6 +495,17 @@ def app():
         result = edit_image(image_id, mask_id, prompt, extension)
         return jsonify({"result": result})
 
+    @app.route("/fill", methods=["POST"])
+    def fill():
+        data = request.get_json()
+        image_id = data["image_id"]
+        mask_id = data["mask_id"]
+        prompt = data["prompt"]
+        extension = data["extension"]
+
+        result = fill_image(image_id, mask_id, prompt, extension)
+        return jsonify({"result": result})
+
     @app.route("/remove", methods=["POST"])
     def remove():
         data = request.get_json()
@@ -446,7 +518,7 @@ def app():
 
     @app.route("/test", methods=["POST"])
     def test():
-        return jsonify({"result": "hello 3"})
+        return jsonify({"result": "hello 4"})
 
 
     app.run(host="0.0.0.0", port=8080)
