@@ -21,9 +21,13 @@ MODEL_URL = (
     "https://huggingface.co/spaces/facebook/ov-seg/resolve/main/sam_vit_h_4b8939.pth"
 )
 
-BIG_LAMA_URL = "https://huggingface.co/camenduru/big-lama/resolve/main/big-lama/models/best.ckpt"
+BIG_LAMA_URL = (
+    "https://huggingface.co/camenduru/big-lama/resolve/main/big-lama/models/best.ckpt"
+)
 
-BIG_LAMA_CONFIG = "https://huggingface.co/camenduru/big-lama/raw/main/big-lama/config.yaml"
+BIG_LAMA_CONFIG = (
+    "https://huggingface.co/camenduru/big-lama/raw/main/big-lama/config.yaml"
+)
 
 
 requirements = [
@@ -53,7 +57,7 @@ requirements = [
     "kornia==0.5.0",
     "webdataset",
     "packaging",
-    "google-cloud-storage"
+    "google-cloud-storage",
 ]
 
 
@@ -83,9 +87,10 @@ def download_model():
 @cached
 def download_big_lama_model():
     import os
+
     if not os.path.exists("/data/models/big_lama/models"):
         os.system("mkdir -p /data/models/big_lama/models")
-    if not os.path.exists('/data/models/big_lama/models/best.ckpt'):
+    if not os.path.exists("/data/models/big_lama/models/best.ckpt"):
         print("Downloading Big Lama model.")
         os.system(f"cd /data/models/big_lama && wget {BIG_LAMA_CONFIG}")
         os.system(f"cd /data/models/big_lama/models && wget {BIG_LAMA_URL}")
@@ -199,18 +204,19 @@ def fill_img_with_sd(img, mask, text_prompt):
     import numpy as np
     import PIL.Image as Image
     from utils.mask_processing import crop_for_filling_pre, crop_for_filling_post
+
     pipe = stable_diffusion_pipe()
     img_crop, mask_crop = crop_for_filling_pre(img, mask)
     img_crop_filled = pipe(
         prompt=text_prompt,
         image=Image.fromarray(img_crop),
-        mask_image=Image.fromarray(mask_crop)
+        mask_image=Image.fromarray(mask_crop),
     ).images[0]
     img_filled = crop_for_filling_post(img, mask, np.array(img_crop_filled))
     return img_filled
 
 
-def make_masks(image: str, extension: str, x: int, y: int, dilation: int | None = None):
+def make_masks(image: str, extension: str, x: int, y: int, dilation: int):
     import sys
     import numpy as np
     import io
@@ -232,7 +238,13 @@ def make_masks(image: str, extension: str, x: int, y: int, dilation: int | None 
     sys.path.append(REPO_PATH)
     os.chdir(REPO_PATH)
 
-    from utils import load_img_to_array, save_array_to_img, show_mask, show_points, dilate_mask
+    from utils import (
+        load_img_to_array,
+        save_array_to_img,
+        show_mask,
+        show_points,
+        dilate_mask,
+    )
 
     image_id = uuid.uuid4()
     print(f"image_id: {image_id}")
@@ -359,8 +371,8 @@ def edit_image(image_id, mask_id, prompt, extension):
 def remove_from_image(image_id, mask_id, extension):
     import sys
 
-    os.environ['TRANSFORMERS_CACHE'] = '/data/models'
-    os.environ['HF_HOME'] = '/data/models'
+    os.environ["TRANSFORMERS_CACHE"] = "/data/models"
+    os.environ["HF_HOME"] = "/data/models"
 
     download_big_lama_model()
 
@@ -385,7 +397,8 @@ def remove_from_image(image_id, mask_id, extension):
         mask,
         "./lama/configs/prediction/default.yaml",
         "/data/models/big_lama",
-        device="cuda")
+        device="cuda",
+    )
     save_array_to_img(img_removed, img_removed_p)
 
     print("Upload results to GCS")
@@ -440,9 +453,7 @@ def fill_image(image_id, mask_id, prompt, extension):
     bucket = get_gcs_bucket()
 
     file_names = [
-        f
-        for f in os.listdir(filled_dir)
-        if os.path.isfile(os.path.join(filled_dir, f))
+        f for f in os.listdir(filled_dir) if os.path.isfile(os.path.join(filled_dir, f))
     ]
 
     try:
@@ -458,6 +469,8 @@ def fill_image(image_id, mask_id, prompt, extension):
         "status": "success",
         "files": file_names,
     }
+
+
 # ------ Flask app ------
 
 
@@ -519,6 +532,5 @@ def app():
     @app.route("/test", methods=["POST"])
     def test():
         return jsonify({"result": "hello 4"})
-
 
     app.run(host="0.0.0.0", port=8080)
