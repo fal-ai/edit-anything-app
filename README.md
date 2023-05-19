@@ -35,10 +35,10 @@ Set the generated key ID and secret as environment variables:
 export FAL_KEY_ID="your-key-id" FAL_KEY_SECRET="your-key-secret"
 ```
 
-### Set the Google Cloud Storage bucket name as an environment variable
+### Set the Google Cloud Storage bucket name as a secret
 The serverless function writes it's results to a GCS bucket.
 ```
-export GCLOUD_BUCKET_NAME="your-bucket-name"
+fal-serverless secrets set GCLOUD_BUCKET_NAME "your-bucket-name"
 ```
 
 ### Set Google Cloud Service Account secret
