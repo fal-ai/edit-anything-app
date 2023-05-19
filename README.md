@@ -43,15 +43,14 @@ The web endpoint uses Google Cloud Storage for saving the inference results. So 
 fal-serverless secrets set GCLOUD_SA_JSON "$(cat path-to-my-service-account.json)"
 ```
 
-### Deploy the `edit_image` and `make_masks` functions as a web endpoints
+### Deploy the `edit_image` and `make_masks` as web endpoints
 
 ```bash
-fal-serverless function serve serverless/app.py edit_image --alias edit_image
-fal-serverless function serve serverless/app.py make_masks --alias make_masks
+fal-serverless function serve serverless/app.py app --alias edit_anything_app
 ```
 And set the provided URL as an environment variable:
 ```bash
-export MASK_FUNCTION_URL=your_mask_endpoint_url EDIT_FUNCTION_URL=your_edit_endpoint_url
+export MASK_FUNCTION_URL=`your_app_endpoint_url`/masks EDIT_FUNCTION_URL=`your_app_endpoint_url`/edit
 ```
 
 You can also set these in `.env.local` file:
