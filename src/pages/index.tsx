@@ -59,7 +59,7 @@ const Home = () => {
     setError(null);
   };
 
-  const tabClass = (tabName) => activeTab === tabName ? 'btn btn-primary' : 'btn';
+  const tabClass = (tabName: string) => activeTab === tabName ? 'btn btn-primary' : 'btn';
 
   const handleImageSelected = (image: ImageFile) => {
     setSelectedImage(image);
@@ -91,7 +91,7 @@ const Home = () => {
           extension: "." + selectedImage.filename.split(".").pop(),
           x: position.x,
           y: position.y,
-          dilation: parseInt(dilation)
+          dilation: dilation
         }),
       });
 
@@ -169,32 +169,39 @@ const Home = () => {
   };
 
   const handleRemove = async () => {
-    const body = {
-      image_id: imageId,
-      extension: "." + selectedImage.filename.split(".").pop(),
-      mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
-    };
-    await handleAction("/api/remove", body, setRemovedImageUrls);
+    if (selectedImage && selectedMask) {
+      const body = {
+        image_id: imageId,
+        extension: "." + selectedImage.filename.split(".").pop(),
+        mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+      };
+      await handleAction("/api/remove", body, setRemovedImageUrls);
+
+    }
   };
 
   const handleGenerate = async () => {
-    const body = {
-      image_id: imageId,
-      extension: "." + selectedImage.filename.split(".").pop(),
-      mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
-      prompt,
-    };
-    await handleAction("/api/edit", body, setReplacedImageUrls);
+    if (selectedImage && selectedMask) {
+      const body = {
+        image_id: imageId,
+        extension: "." + selectedImage.filename.split(".").pop(),
+        mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+        prompt,
+      };
+      await handleAction("/api/edit", body, setReplacedImageUrls);
+    }
   };
 
   const handleFill = async () => {
-    const body = {
-      image_id: imageId,
-      extension: "." + selectedImage.filename.split(".").pop(),
-      mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
-      prompt: fillPrompt,
-    };
-    await handleAction("/api/fill", body, setFilledImageUrls);
+    if (selectedImage && selectedMask) {
+      const body = {
+        image_id: imageId,
+        extension: "." + selectedImage.filename.split(".").pop(),
+        mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+        prompt: fillPrompt,
+      };
+      await handleAction("/api/fill", body, setFilledImageUrls);
+    }
   };
 
   async function getNumberOfImages() {
@@ -268,7 +275,7 @@ const Home = () => {
                 type="number"
                 name="dilation"
                 value={dilation}
-                onChange={(e) => setDilation(e.target.value)}
+                onChange={(e) => setDilation(parseInt(e.target.value))}  // @ts-nocheck
                 className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
                 disabled={isLoading}
               />
