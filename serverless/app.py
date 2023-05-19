@@ -6,9 +6,11 @@ import os
 import re
 import uuid
 
+BUCKET_NAME = os.environ.get("GCLOUD_BUCKET_NAME")
+
 REPO_PATH = "/data/repos/inpaint-anyting"
 
-BASE_GCS_URL = "https://storage.googleapis.com/fal_edit_anything_results"
+BASE_GCS_URL = f"https://storage.googleapis.com/{BUCKET_NAME}"
 
 segment_anything_repo = (
     "https://github.com/geekyutao/Inpaint-Anything.git"
@@ -112,7 +114,7 @@ def get_gcs_bucket():
 
     try:
         storage_client = storage.Client.from_service_account_json("/root/gcp_sa.json")
-        bucket = storage_client.get_bucket("fal_edit_anything_results")
+        bucket = storage_client.get_bucket(BUCKET_NAME)
         return bucket
     except Exception as e:
         # Stringify original error so that it can be passed to the fal-serverless client
