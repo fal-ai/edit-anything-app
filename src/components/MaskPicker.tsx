@@ -2,9 +2,11 @@ import { PropsWithChildren } from "react";
 import Card from "./Card";
 import EmptyMessage from "./EmptyMessage";
 import ImageMask from "./ImageMask";
-import { ImageFile } from "./ImageSelector";
+import { ImageFile } from "@/data/image";
+import { Model } from "@/data/modelMetadata";
 
 export interface MaskPickerProps {
+  displayMasks: string[];
   masks: string[];
   dilation: number;
   isLoading: boolean;
@@ -14,10 +16,12 @@ export interface MaskPickerProps {
   generateMasks: () => void;
   selectedMask: string | null;
   handleMaskSelected: (mask: string) => void;
+  selectedModel: Model;
 }
 
 export default function MaskPicker(props: PropsWithChildren<MaskPickerProps>) {
   const {
+    displayMasks,
     masks,
     dilation,
     isLoading,
@@ -43,7 +47,7 @@ export default function MaskPicker(props: PropsWithChildren<MaskPickerProps>) {
         />
       </label>
 
-      {masks.length === 0 && (
+      {displayMasks.length === 0 && (
         <div className="items-center mt-0 md:mt-12">
           <div className="hidden md:display">
             <EmptyMessage message="No masks generated yet" />
@@ -60,13 +64,15 @@ export default function MaskPicker(props: PropsWithChildren<MaskPickerProps>) {
         </div>
       )}
 
-      {masks.length > 0 && (
+      {displayMasks.length > 0 && (
         <>
-          <span className="font-light mb-0 inline-block opacity-70">
-            <strong>Hint:</strong> click on the image select a mask
-          </span>
+          {props.selectedModel.id === "sam" && (
+            <span className="font-light mb-0 inline-block opacity-70">
+              <strong>Hint:</strong> click on the image select a mask
+            </span>
+          )}
           <div className="grid grid-cols-1 space-y-2">
-            {masks.map((mask, index) => (
+            {displayMasks.map((mask, index) => (
               <ImageMask
                 key={index}
                 alt={`Mask ${index}`}

@@ -1,12 +1,10 @@
 import Head from "next/head";
-import NextImage from "next/image";
 import { useEffect, useState } from "react";
 
 import Card from "@/components/Card";
-import EmptyMessage from "@/components/EmptyMessage";
 import ErrorNotification from "@/components/ErrorNotification";
 import ImageCountDisplay from "@/components/ImageCountDisplay";
-import ImageSelector, { ImageFile } from "@/components/ImageSelector";
+import ImageSelector from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
 import Steps, { StepName } from "@/components/Steps";
 import MaskPicker from "@/components/MaskPicker";
@@ -14,6 +12,9 @@ import ModelPicker from "@/components/ModelPicker";
 import ModelCard from "@/components/ModelCard";
 import { Model, models } from "@/data/modelMetadata";
 import SingleImageResult from "@/components/SingleImageResult";
+import ScribbleBox from "@/components/ScribbleBox";
+import { ImageFile } from "@/data/image";
+import { StableDiffusionInput } from "@/components/StableDiffusion";
 
 type ErrorMessage = {
   message: string;
@@ -25,8 +26,9 @@ const Home = () => {
   const [step, setStep] = useState<StepName>(StepName.ChooseImage);
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [position, setPosition] = useState<ImageSpotPosition | null>(null);
-  const [imageId, setImageId] = useState<string | null>(null);
+  // masks are the black and white images display masks are the blue ones we show to the user
   const [masks, setMasks] = useState<string[]>([]);
+  const [displayMasks, setDisplayMasks] = useState<string[]>([]);
   const [selectedMask, setSelectedMask] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [fillPrompt, setFillPrompt] = useState("");
@@ -41,14 +43,16 @@ const Home = () => {
   const [singleImageResultUrl, setSingleImageResultUrl] = useState<
     string | null
   >(null);
+  const [scribblePaused, setScriblePaused] = useState(false);
+  const [modelCardHidden, setModelCardHidden] = useState(true);
 
   const reset = () => {
     setStep(StepName.ChooseImage);
     setError(null);
     setSelectedImage(null);
     setPosition(null);
-    setImageId(null);
     setMasks([]);
+    setDisplayMasks([]);
     setSelectedMask(null);
     setPrompt("");
     setReplacedImageUrls([]);
@@ -56,6 +60,8 @@ const Home = () => {
     setLoading(false);
     setSelectedModel(models["rembg"]);
     setSingleImageResultUrl(null);
+    setScriblePaused(false);
+    setModelCardHidden(true);
   };
 
   useEffect(() => {
@@ -68,9 +74,6 @@ const Home = () => {
   const dismissError = () => {
     setError(null);
   };
-
-  const tabClass = (tabName: string) =>
-    activeTab === tabName ? "btn btn-primary" : "btn";
 
   const handleImageSelected = (image: ImageFile) => {
     setSelectedImage(image);
@@ -86,7 +89,11 @@ const Home = () => {
     setLoading(true);
     if (selectedImage) {
       try {
-        const response = await fetch(`/api/rembg`, {
+        const promptEl: HTMLInputElement = document.getElementById(
+          "single-image-prompt-input"
+        ) as HTMLInputElement;
+        const promtValue = promptEl ? promptEl.value : null;
+        const response = await fetch(`/api/${selectedModel.id}`, {
           method: "POST",
           headers: {
             accept: "application/json",
@@ -94,6 +101,7 @@ const Home = () => {
           },
           body: JSON.stringify({
             base64Image: selectedImage.data,
+            prompt: promtValue,
           }),
         });
         const data = await response.json();
@@ -134,8 +142,8 @@ const Home = () => {
         throw new Error(`Request failed with status ${response.status}`);
       }
       const data = await response.json();
-      setMasks(data.files);
-      setImageId(data.image_id);
+      setDisplayMasks(data.displayMasks);
+      setMasks(data.masks);
       setStep(StepName.ChooseMask);
     } catch (e: any) {
       setError({ message: "Failed to generate masks", details: e.message });
@@ -145,20 +153,16 @@ const Home = () => {
   };
 
   const handleMaskSelected = (mask: string) => {
-    setSelectedMask(mask);
+    // TODO: find mask index in a better way
+    const index = displayMasks.indexOf(mask);
+    setSelectedMask(masks[index]);
     setStep(StepName.DefinePrompt);
   };
 
   const validateInputs = (): string | null => {
-    if (!selectedImage || !position || !selectedMask) {
+    if (!position || !selectedMask) {
       return "You must add an image and select a mask before.";
     }
-
-    const maskId = selectedMask.match(/with_mask_(\d+)/)?.[1];
-    if (!maskId) {
-      return "Failed to extract mask id from mask url";
-    }
-
     return null;
   };
 
@@ -177,10 +181,8 @@ const Home = () => {
     }
 
     const data = await response.json();
-    const timestamp = Date.now();
-    const images = data.files.map(
-      (imageUrl: string) => `${imageUrl}?t=${timestamp}`
-    );
+    // TODO: removed the timestamp
+    const images = data.map((imageUrl: string) => `${imageUrl}`);
     return images;
   };
 
@@ -196,7 +198,6 @@ const Home = () => {
         setError({ message: validationError });
         return;
       }
-
       const images = await fetchData(apiPath, body);
       setImageUrls(images);
       setStep(StepName.Generate);
@@ -210,20 +211,18 @@ const Home = () => {
   const handleRemove = async () => {
     if (selectedImage && selectedMask) {
       const body = {
-        image_id: imageId,
-        extension: "." + selectedImage.filename.split(".").pop(),
-        mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+        mask_url: selectedMask,
+        image_url: selectedImage,
       };
       await handleAction("/api/remove", body, setRemovedImageUrls);
     }
   };
 
-  const handleGenerate = async () => {
+  const handleReplace = async () => {
     if (selectedImage && selectedMask) {
       const body = {
-        image_id: imageId,
-        extension: "." + selectedImage.filename.split(".").pop(),
-        mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
+        mask_url: selectedMask,
+        image_url: selectedImage,
         prompt,
       };
       await handleAction("/api/edit", body, setReplacedImageUrls);
@@ -233,10 +232,9 @@ const Home = () => {
   const handleFill = async () => {
     if (selectedImage && selectedMask) {
       const body = {
-        image_id: imageId,
-        extension: "." + selectedImage.filename.split(".").pop(),
-        mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
-        prompt: fillPrompt,
+        mask_url: selectedMask,
+        image_url: selectedImage,
+        prompt,
       };
       await handleAction("/api/fill", body, setFilledImageUrls);
     }
@@ -244,6 +242,16 @@ const Home = () => {
 
   const handleModelSelected = (model_id: string) => {
     setSelectedModel(models[model_id]);
+    setSelectedImage(null);
+  };
+
+  const handleScrible = async (data: string) => {
+    const image: ImageFile = {
+      data: data,
+      filename: "scribble.png",
+      size: { width: 512, height: 512 },
+    };
+    setSelectedImage(image);
   };
 
   async function getNumberOfImages() {
@@ -261,169 +269,6 @@ const Home = () => {
 
   const hasFillPrompt = fillPrompt && fillPrompt.trim().length > 0;
 
-  const StableDiffusionOptionsButtonGroup = () => {
-    return (
-      <div className="flex container mx-auto pt-8 w-full">
-        <button
-          onClick={() => setActiveTab("replace")}
-          className={`btn ${tabClass("replace")} mx-2`}
-        >
-          Replace
-        </button>
-        <button
-          onClick={() => setActiveTab("remove")}
-          className={`btn ${tabClass("remove")} mx-2`}
-        >
-          Remove
-        </button>
-        <button
-          onClick={() => setActiveTab("fill")}
-          className={`btn ${tabClass("fill")} mx-2`}
-        >
-          Fill
-        </button>
-      </div>
-    );
-  };
-
-  const StableDiffusionInput = () => {
-    return (
-      <div>
-        <StableDiffusionOptionsButtonGroup />
-        {activeTab === "replace" && (
-          <div className="container mx-auto pt-8 w-full">
-            <Card title="Replace...">
-              <div className="flex flex-col md:flex-row md:space-x-6">
-                <div className="form-control w-full md:w-3/5 max-w-full">
-                  <label>
-                    <input
-                      id="prompt_input"
-                      type="text"
-                      name="prompt"
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="something creative, like 'a bus on the moon'"
-                      className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
-                      disabled={isLoading}
-                    />
-                  </label>
-                </div>
-                <button
-                  className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
-                  disabled={isLoading || !selectedMask || !hasPrompt}
-                  onClick={handleGenerate}
-                >
-                  {selectedMask ? "Generate" : "Pick one of the mask options"}
-                </button>
-              </div>
-              {replacedImageUrls.length === 0 && (
-                <div className="my-12">
-                  <EmptyMessage message="Nothing to see just yet" />
-                </div>
-              )}
-              <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
-                {replacedImageUrls.map((url, index) => (
-                  <NextImage
-                    key={index}
-                    src={url}
-                    alt={`Generated Image ${index + 1}`}
-                    width={0}
-                    height={0}
-                    sizes="100vw"
-                    style={{ width: "100%", height: "auto" }}
-                    className="my-0"
-                  />
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-        {activeTab === "remove" && (
-          <div className="container mx-auto pt-8 w-full">
-            <Card title="Remove...">
-              <div className="flex flex-col md:flex-row md:space-x-6">
-                <button
-                  className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
-                  disabled={isLoading || !selectedMask}
-                  onClick={handleRemove}
-                >
-                  {selectedMask ? "Remove" : "Pick one of the mask options"}
-                </button>
-              </div>
-              {removedImageUrls.length === 0 && (
-                <div className="my-12">
-                  <EmptyMessage message="Nothing to see just yet" />
-                </div>
-              )}
-              <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
-                {removedImageUrls.map((url, index) => (
-                  <NextImage
-                    key={index}
-                    src={url}
-                    alt={`Generated Image ${index + 1}`}
-                    width={0}
-                    height={0}
-                    sizes="100vw"
-                    style={{ width: "100%", height: "auto" }}
-                    className="my-0"
-                  />
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-        {activeTab === "fill" && (
-          <div className="container mx-auto pt-8 w-full">
-            <Card title="Fill...">
-              <div className="flex flex-col md:flex-row md:space-x-6">
-                <div className="form-control w-full md:w-3/5 max-w-full">
-                  <label>
-                    <input
-                      id="fill_prompt_input"
-                      type="text"
-                      name="fill_prompt"
-                      value={fillPrompt}
-                      onChange={(e) => setFillPrompt(e.target.value)}
-                      placeholder="something creative, like 'an alien'"
-                      className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
-                      disabled={isLoading}
-                    />
-                  </label>
-                </div>
-                <button
-                  className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
-                  disabled={isLoading || !selectedMask || !hasFillPrompt}
-                  onClick={handleFill}
-                >
-                  {selectedMask ? "Fill" : "Pick one of the mask options"}
-                </button>
-              </div>
-              {filledImageUrls.length === 0 && (
-                <div className="my-12">
-                  <EmptyMessage message="Nothing to see just yet" />
-                </div>
-              )}
-              <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
-                {filledImageUrls.map((url, index) => (
-                  <NextImage
-                    key={index}
-                    src={url}
-                    alt={`Generated Image ${index + 1}`}
-                    width={0}
-                    height={0}
-                    sizes="100vw"
-                    style={{ width: "100%", height: "auto" }}
-                    className="my-0"
-                  />
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <main className="min-h-screen md:py-12">
       <Head>
@@ -433,51 +278,72 @@ const Home = () => {
         <ImageCountDisplay count={number} />
       </div>
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-        <ModelPicker onClick={handleModelSelected} />
-        <div className="md:display md:col-span-3">
-          <ModelCard model={selectedModel || models["rembg"]} />
+        <div className="md:display md:col-span-2">
+          <ModelPicker
+            onClick={handleModelSelected}
+            selectedModel={selectedModel}
+          />
         </div>
-
+        <div className="md:display md:col-span-3">
+          <ModelCard
+            model={selectedModel || models["rembg"]}
+            modelCardHidden={modelCardHidden}
+            setModelCardHidden={setModelCardHidden}
+          />
+        </div>
         <div className="hidden md:display md:col-span-3">
           <Card>
             <Steps currentStep={step} />
           </Card>
         </div>
         <div className="md:col-span-2">
-          <Card title="Source image" classNames="min-h-full">
-            {!selectedImage && (
-              <ImageSelector
-                onImageSelect={handleImageSelected}
-                disabled={isLoading}
-              />
-            )}
-            {selectedImage && (
-              <>
-                <div className="flex justify-between">
-                  <span className="font-light mb-0 inline-block opacity-70">
-                    <strong>Hint:</strong> click on the image to set the mask
-                    reference point
-                  </span>
-                  <button
-                    className="btn btn-outline btn-sm self-end"
-                    onClick={reset}
-                    disabled={isLoading}
-                  >
-                    Reset
-                  </button>
-                </div>
-                <ImageSpot
-                  imageUrl={selectedImage.data}
-                  height={selectedImage.size.height}
-                  width={selectedImage.size.width}
-                  onClick={handleImageClick}
+          {selectedModel.id === "controlnet" && (
+            <Card title="Scribble" classNames="min-h-full">
+              <ScribbleBox
+                handleScrible={handleScrible}
+                setScriblePaused={setScriblePaused}
+              ></ScribbleBox>
+            </Card>
+          )}
+          {(selectedModel.id === "rembg" || selectedModel.id === "sam") && (
+            <Card title="Source image" classNames="min-h-full">
+              {!selectedImage && (
+                <ImageSelector
+                  onImageSelect={handleImageSelected}
+                  disabled={isLoading}
                 />
-              </>
-            )}
-          </Card>
+              )}
+              {selectedImage && (
+                <>
+                  <div className="flex justify-between">
+                    {selectedModel.id === "sam" && (
+                      <span className="font-light mb-0 inline-block opacity-70">
+                        <strong>Hint:</strong> click on the image to set the
+                        mask reference point
+                      </span>
+                    )}
+                    <button
+                      className="btn btn-outline btn-sm self-end"
+                      onClick={reset}
+                      disabled={isLoading}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <ImageSpot
+                    imageUrl={selectedImage.data}
+                    height={selectedImage.size.height}
+                    width={selectedImage.size.width}
+                    onClick={handleImageClick}
+                  />
+                </>
+              )}
+            </Card>
+          )}
         </div>
         <div className="md:col-span-1">
-          {selectedModel.id === "rembg" && (
+          {(selectedModel.id === "rembg" ||
+            selectedModel.id === "controlnet") && (
             <SingleImageResult
               isLoading={isLoading}
               selectedImage={selectedImage}
@@ -487,6 +353,8 @@ const Home = () => {
           )}
           {selectedModel.id === "sam" && (
             <MaskPicker
+              selectedModel={selectedModel}
+              displayMasks={displayMasks}
               masks={masks}
               dilation={dilation}
               isLoading={isLoading}
@@ -500,7 +368,28 @@ const Home = () => {
           )}
         </div>
       </div>
-      <div>{selectedModel.id === "sam" && <StableDiffusionInput />}</div>
+      <div>
+        {selectedModel.id === "sam" && (
+          <StableDiffusionInput
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            setPrompt={setPrompt}
+            prompt={prompt}
+            fillPrompt={fillPrompt}
+            hasFillPrompt={hasFillPrompt}
+            isLoading={isLoading}
+            handleReplace={handleReplace}
+            handleRemove={handleRemove}
+            handleFill={handleFill}
+            setFillPrompt={setFillPrompt}
+            selectedMask={selectedMask}
+            hasPrompt={hasPrompt}
+            replacedImageUrls={replacedImageUrls}
+            removedImageUrls={removedImageUrls}
+            filledImageUrls={filledImageUrls}
+          />
+        )}
+      </div>
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="alert max-w-md shadow-lg p-6 md:p-12 mx-4 md:mx-0">
