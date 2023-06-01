@@ -6,11 +6,14 @@ import Card from "@/components/Card";
 import EmptyMessage from "@/components/EmptyMessage";
 import ErrorNotification from "@/components/ErrorNotification";
 import ImageCountDisplay from "@/components/ImageCountDisplay";
-import ImageMask from "@/components/ImageMask";
 import ImageSelector, { ImageFile } from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
 import Steps, { StepName } from "@/components/Steps";
 import MaskPicker from "@/components/MaskPicker";
+import ModelPicker from "@/components/ModelPicker";
+import ModelCard from "@/components/ModelCard";
+import { Model, models } from "@/data/modelMetadata";
+import SingleImageResult from "@/components/SingleImageResult";
 
 type ErrorMessage = {
   message: string;
@@ -33,7 +36,11 @@ const Home = () => {
   const [isLoading, setLoading] = useState(false);
   const [number, setNumber] = useState(0);
   const [dilation, setDilation] = useState(0);
-  const [activeTab, setActiveTab] = useState("replace")
+  const [activeTab, setActiveTab] = useState("replace");
+  const [selectedModel, setSelectedModel] = useState<Model>(models["rembg"]);
+  const [singleImageResultUrl, setSingleImageResultUrl] = useState<
+    string | null
+  >(null);
 
   const reset = () => {
     setStep(StepName.ChooseImage);
@@ -47,6 +54,8 @@ const Home = () => {
     setReplacedImageUrls([]);
     setRemovedImageUrls([]);
     setLoading(false);
+    setSelectedModel(models["rembg"]);
+    setSingleImageResultUrl(null);
   };
 
   useEffect(() => {
@@ -60,7 +69,8 @@ const Home = () => {
     setError(null);
   };
 
-  const tabClass = (tabName: string) => activeTab === tabName ? 'btn btn-primary' : 'btn';
+  const tabClass = (tabName: string) =>
+    activeTab === tabName ? "btn btn-primary" : "btn";
 
   const handleImageSelected = (image: ImageFile) => {
     setSelectedImage(image);
@@ -70,6 +80,30 @@ const Home = () => {
   const handleImageClick = (position: ImageSpotPosition) => {
     setPosition(position);
     setStep(StepName.GenerateMask);
+  };
+
+  const generateSingleImageResult = async () => {
+    setLoading(true);
+    if (selectedImage) {
+      try {
+        const response = await fetch(`/api/rembg`, {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            base64Image: selectedImage.data,
+          }),
+        });
+        const data = await response.json();
+        setSingleImageResultUrl(data["imageUrl"]);
+      } catch (e: any) {
+        setError({ message: "Failed to generate masks", details: e.message });
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const generateMasks = async () => {
@@ -92,7 +126,7 @@ const Home = () => {
           extension: "." + selectedImage.filename.split(".").pop(),
           x: position.x,
           y: position.y,
-          dilation: dilation
+          dilation: dilation,
         }),
       });
 
@@ -150,7 +184,11 @@ const Home = () => {
     return images;
   };
 
-  const handleAction = async (apiPath: string, body: object, setImageUrls: Function) => {
+  const handleAction = async (
+    apiPath: string,
+    body: object,
+    setImageUrls: Function
+  ) => {
     setLoading(true);
     try {
       const validationError = validateInputs();
@@ -177,7 +215,6 @@ const Home = () => {
         mask_id: selectedMask.match(/with_mask_(\d+)/)?.[1],
       };
       await handleAction("/api/remove", body, setRemovedImageUrls);
-
     }
   };
 
@@ -205,6 +242,10 @@ const Home = () => {
     }
   };
 
+  const handleModelSelected = (model_id: string) => {
+    setSelectedModel(models[model_id]);
+  };
+
   async function getNumberOfImages() {
     const response = await fetch("/api/images", {
       method: "GET",
@@ -220,6 +261,169 @@ const Home = () => {
 
   const hasFillPrompt = fillPrompt && fillPrompt.trim().length > 0;
 
+  const StableDiffusionOptionsButtonGroup = () => {
+    return (
+      <div className="flex container mx-auto pt-8 w-full">
+        <button
+          onClick={() => setActiveTab("replace")}
+          className={`btn ${tabClass("replace")} mx-2`}
+        >
+          Replace
+        </button>
+        <button
+          onClick={() => setActiveTab("remove")}
+          className={`btn ${tabClass("remove")} mx-2`}
+        >
+          Remove
+        </button>
+        <button
+          onClick={() => setActiveTab("fill")}
+          className={`btn ${tabClass("fill")} mx-2`}
+        >
+          Fill
+        </button>
+      </div>
+    );
+  };
+
+  const StableDiffusionInput = () => {
+    return (
+      <div>
+        <StableDiffusionOptionsButtonGroup />
+        {activeTab === "replace" && (
+          <div className="container mx-auto pt-8 w-full">
+            <Card title="Replace...">
+              <div className="flex flex-col md:flex-row md:space-x-6">
+                <div className="form-control w-full md:w-3/5 max-w-full">
+                  <label>
+                    <input
+                      id="prompt_input"
+                      type="text"
+                      name="prompt"
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="something creative, like 'a bus on the moon'"
+                      className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
+                      disabled={isLoading}
+                    />
+                  </label>
+                </div>
+                <button
+                  className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
+                  disabled={isLoading || !selectedMask || !hasPrompt}
+                  onClick={handleGenerate}
+                >
+                  {selectedMask ? "Generate" : "Pick one of the mask options"}
+                </button>
+              </div>
+              {replacedImageUrls.length === 0 && (
+                <div className="my-12">
+                  <EmptyMessage message="Nothing to see just yet" />
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
+                {replacedImageUrls.map((url, index) => (
+                  <NextImage
+                    key={index}
+                    src={url}
+                    alt={`Generated Image ${index + 1}`}
+                    width={0}
+                    height={0}
+                    sizes="100vw"
+                    style={{ width: "100%", height: "auto" }}
+                    className="my-0"
+                  />
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+        {activeTab === "remove" && (
+          <div className="container mx-auto pt-8 w-full">
+            <Card title="Remove...">
+              <div className="flex flex-col md:flex-row md:space-x-6">
+                <button
+                  className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
+                  disabled={isLoading || !selectedMask}
+                  onClick={handleRemove}
+                >
+                  {selectedMask ? "Remove" : "Pick one of the mask options"}
+                </button>
+              </div>
+              {removedImageUrls.length === 0 && (
+                <div className="my-12">
+                  <EmptyMessage message="Nothing to see just yet" />
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
+                {removedImageUrls.map((url, index) => (
+                  <NextImage
+                    key={index}
+                    src={url}
+                    alt={`Generated Image ${index + 1}`}
+                    width={0}
+                    height={0}
+                    sizes="100vw"
+                    style={{ width: "100%", height: "auto" }}
+                    className="my-0"
+                  />
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+        {activeTab === "fill" && (
+          <div className="container mx-auto pt-8 w-full">
+            <Card title="Fill...">
+              <div className="flex flex-col md:flex-row md:space-x-6">
+                <div className="form-control w-full md:w-3/5 max-w-full">
+                  <label>
+                    <input
+                      id="fill_prompt_input"
+                      type="text"
+                      name="fill_prompt"
+                      value={fillPrompt}
+                      onChange={(e) => setFillPrompt(e.target.value)}
+                      placeholder="something creative, like 'an alien'"
+                      className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
+                      disabled={isLoading}
+                    />
+                  </label>
+                </div>
+                <button
+                  className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
+                  disabled={isLoading || !selectedMask || !hasFillPrompt}
+                  onClick={handleFill}
+                >
+                  {selectedMask ? "Fill" : "Pick one of the mask options"}
+                </button>
+              </div>
+              {filledImageUrls.length === 0 && (
+                <div className="my-12">
+                  <EmptyMessage message="Nothing to see just yet" />
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
+                {filledImageUrls.map((url, index) => (
+                  <NextImage
+                    key={index}
+                    src={url}
+                    alt={`Generated Image ${index + 1}`}
+                    width={0}
+                    height={0}
+                    sizes="100vw"
+                    style={{ width: "100%", height: "auto" }}
+                    className="my-0"
+                  />
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <main className="min-h-screen md:py-12">
       <Head>
@@ -229,6 +433,11 @@ const Home = () => {
         <ImageCountDisplay count={number} />
       </div>
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+        <ModelPicker onClick={handleModelSelected} />
+        <div className="md:display md:col-span-3">
+          <ModelCard model={selectedModel || models["rembg"]} />
+        </div>
+
         <div className="hidden md:display md:col-span-3">
           <Card>
             <Steps currentStep={step} />
@@ -268,170 +477,30 @@ const Home = () => {
           </Card>
         </div>
         <div className="md:col-span-1">
-          <MaskPicker
-            masks={masks}
-            dilation={dilation}
-            isLoading={isLoading}
-            setDilation={setDilation}
-            selectedImage={selectedImage}
-            position={position}
-            generateMasks={generateMasks}
-            selectedMask={selectedMask}
-            handleMaskSelected={handleMaskSelected}
-          />
+          {selectedModel.id === "rembg" && (
+            <SingleImageResult
+              isLoading={isLoading}
+              selectedImage={selectedImage}
+              generateSingleImageResult={generateSingleImageResult}
+              singleImageResultUrl={singleImageResultUrl}
+            />
+          )}
+          {selectedModel.id === "sam" && (
+            <MaskPicker
+              masks={masks}
+              dilation={dilation}
+              isLoading={isLoading}
+              setDilation={setDilation}
+              selectedImage={selectedImage}
+              position={position}
+              generateMasks={generateMasks}
+              selectedMask={selectedMask}
+              handleMaskSelected={handleMaskSelected}
+            />
+          )}
         </div>
       </div>
-      <div className="flex container mx-auto pt-8 w-full">
-        <button
-          onClick={() => setActiveTab('replace')}
-          className={`btn ${tabClass('replace')} mx-2`}
-        >
-          Replace
-        </button>
-        <button
-          onClick={() => setActiveTab('remove')}
-          className={`btn ${tabClass('remove')} mx-2`}
-        >
-          Remove
-        </button>
-        <button
-          onClick={() => setActiveTab('fill')}
-          className={`btn ${tabClass('fill')} mx-2`}
-        >
-          Fill
-        </button>
-      </div>
-      {activeTab === 'replace' && (
-      <div className="container mx-auto pt-8 w-full">
-        <Card title="Replace...">
-          <div className="flex flex-col md:flex-row md:space-x-6">
-            <div className="form-control w-full md:w-3/5 max-w-full">
-              <label>
-                <input
-                  id="prompt_input"
-                  type="text"
-                  name="prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="something creative, like 'a bus on the moon'"
-                  className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
-                  disabled={isLoading}
-                />
-              </label>
-            </div>
-            <button
-              className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
-              disabled={isLoading || !selectedMask || !hasPrompt}
-              onClick={handleGenerate}
-            >
-              {selectedMask ? "Generate" : "Pick one of the mask options"}
-            </button>
-          </div>
-          {replacedImageUrls.length === 0 && (
-            <div className="my-12">
-              <EmptyMessage message="Nothing to see just yet" />
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
-            {replacedImageUrls.map((url, index) => (
-              <NextImage
-                key={index}
-                src={url}
-                alt={`Generated Image ${index + 1}`}
-                width={0}
-                height={0}
-                sizes="100vw"
-                style={{ width: "100%", height: "auto" }}
-                className="my-0"
-              />
-            ))}
-          </div>
-        </Card>
-      </div>
-      )}
-      {activeTab === 'remove' && (
-        <div className="container mx-auto pt-8 w-full">
-        <Card title="Remove...">
-          <div className="flex flex-col md:flex-row md:space-x-6">
-	          <button
-              className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
-              disabled={isLoading || !selectedMask}
-              onClick={handleRemove}
-            >
-	            {selectedMask ? "Remove" : "Pick one of the mask options"}
-            </button>
-          </div>
-          {removedImageUrls.length === 0 && (
-            <div className="my-12">
-              <EmptyMessage message="Nothing to see just yet" />
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
-            {removedImageUrls.map((url, index) => (
-              <NextImage
-                key={index}
-                src={url}
-                alt={`Generated Image ${index + 1}`}
-                width={0}
-                height={0}
-                sizes="100vw"
-                style={{ width: "100%", height: "auto" }}
-                className="my-0"
-              />
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      )}
-      {activeTab === 'fill' && (
-      <div className="container mx-auto pt-8 w-full">
-        <Card title="Fill...">
-          <div className="flex flex-col md:flex-row md:space-x-6">
-            <div className="form-control w-full md:w-3/5 max-w-full">
-              <label>
-                <input
-                  id="fill_prompt_input"
-                  type="text"
-                  name="fill_prompt"
-                  value={fillPrompt}
-                  onChange={(e) => setFillPrompt(e.target.value)}
-                  placeholder="something creative, like 'an alien'"
-                  className="input placeholder-gray-400 dark:placeholder-gray-600 w-full"
-                  disabled={isLoading}
-                />
-              </label>
-            </div>
-	          <button
-              className="btn btn-primary max-sm:btn-wide mt-4 mx-auto md:mx-0 md:mt-0"
-              disabled={isLoading || !selectedMask || !hasFillPrompt}
-              onClick={handleFill}
-            >
-	            {selectedMask ? "Fill" : "Pick one of the mask options"}
-            </button>
-          </div>
-          {filledImageUrls.length === 0 && (
-            <div className="my-12">
-              <EmptyMessage message="Nothing to see just yet" />
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-4 mt-4 md:mt-6 lg:p-12 mx-auto">
-            {filledImageUrls.map((url, index) => (
-              <NextImage
-                key={index}
-                src={url}
-                alt={`Generated Image ${index + 1}`}
-                width={0}
-                height={0}
-                sizes="100vw"
-                style={{ width: "100%", height: "auto" }}
-                className="my-0"
-              />
-            ))}
-          </div>
-        </Card>
-      </div>
-      )}
+      <div>{selectedModel.id === "sam" && <StableDiffusionInput />}</div>
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="alert max-w-md shadow-lg p-6 md:p-12 mx-4 md:mx-0">
