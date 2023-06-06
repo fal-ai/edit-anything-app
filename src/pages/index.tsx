@@ -15,6 +15,7 @@ import SingleImageResult from "@/components/SingleImageResult";
 import ScribbleBox from "@/components/ScribbleBox";
 import { ImageFile } from "@/data/image";
 import { StableDiffusionInput } from "@/components/StableDiffusion";
+import va from "@vercel/analytics";
 
 type ErrorMessage = {
   message: string;
@@ -241,6 +242,7 @@ const Home = () => {
   };
 
   const handleModelSelected = (model_id: string) => {
+    va.track("model-selected-" + model_id);
     setSelectedModel(models[model_id]);
     setSelectedImage(null);
   };
