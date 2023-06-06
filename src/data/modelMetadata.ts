@@ -2,51 +2,66 @@ export type Model = {
   id: string;
   name: string;
   apiEndpoint: string;
-  pythonExampleEndpoint: string;
-  javascriptExampleEndpoint: string;
-  code: string;
+  pythonCode: string;
+  jsCode: string;
 };
 
 const regmbModel: Model = {
   id: "rembg",
   name: "Rembg",
-  apiEndpoint: "https://103961668-rembg.gateway.alpha.fal.ai",
-  pythonExampleEndpoint:
-    "https://gist.github.com/turbo1912/c0783e17d706a955fe4a9354a9bdf227",
-  javascriptExampleEndpoint:
-    "https://gist.github.com/turbo1912/2f8138370c8e189fcd961c273628689a",
-  code: `
+  apiEndpoint: process.env.NEXT_PUBLIC_REMBG_URL || "",
+  pythonCode: `
 import requests
 
-rembg_base_url = "https://103961668-rembg.gateway.alpha.fal.ai"
+rembg_base_url = ${process.env.NEXT_PUBLIC_REMBG_URL}
 fal_token = "<YOUR_TOKEN_HERE>"
 rembg_response = requests.post(
     f"{rembg_base_url}/remove",
-    files={"file": open("sodacan.png", "rb")},
+    files={"file": open("image.png", "rb")},
     data={"fal_token": fal_token},
 )
     `,
+  jsCode: "",
 };
 
 const segmentAnything: Model = {
   id: "sam",
   name: "Segment Anything",
-  apiEndpoint: "https://103961668-sam.gateway.alpha.fal.ai",
-  pythonExampleEndpoint:
-    "https://gist.github.com/turbo1912/c0783e17d706a955fe4a9354a9bdf227",
-  javascriptExampleEndpoint:
-    "https://gist.github.com/turbo1912/2f8138370c8e189fcd961c273628689a",
-  code: `
+  apiEndpoint: process.env.NEXT_PUBLIC_MASK_FUNCTION_URL || "",
+  pythonCode: `
 import requests
 
-sam_base_url = "https://103961668-sam.gateway.alpha.fal.ai"
+sam_base_url = "${process.env.NEXT_PUBLIC_MASK_FUNCTION_URL}" 
 fal_token = "<YOUR_TOKEN_HERE>"
 sam_response = requests.post(
-    f"{rembg_base_url}/masks",
-    files={"file": open("sodacan.png", "rb")},
+    f"{sam_base_url}/masks",
+    files={"file": open("image.png", "rb")},
     data={"fal_token": fal_token},
 )
 `,
+  jsCode: "",
+};
+
+const controlnet: Model = {
+  id: "controlnet",
+  name: "lllyasviel/sd-controlnet-scribble",
+  apiEndpoint: process.env.NEXT_PUBLIC_CONTROLNET_SCRIBBLE_URL || "",
+  pythonCode: `
+import requests
+
+url = "${process.env.NEXT_PUBLIC_CONTROLNET_SCRIBBLE_URL}"
+
+response = requests.post(
+    f"{url}/generate",
+    files={"file": open("turtle.png", "rb")},
+    data={
+        "prompt": "turle on the sky",
+        "num_samples": 1,
+        "fal_token": "fal_token",
+    },
+)
+`,
+  jsCode: "",
 };
 
 type ModelRegistry = {
@@ -56,4 +71,5 @@ type ModelRegistry = {
 export const models: ModelRegistry = {
   rembg: regmbModel,
   sam: segmentAnything,
+  controlnet: controlnet,
 };

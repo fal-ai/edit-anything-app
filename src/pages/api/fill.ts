@@ -2,7 +2,9 @@ import { incrementImageCount } from "@/data/storage";
 import fetch from "cross-fetch";
 import type { NextApiHandler } from "next";
 
-const FILL_FUNCTION_URL = process.env.FILL_FUNCTION_URL;
+const FILL_FUNCTION_URL = process.env.NEXT_PUBLIC_FILL_FUNCTION_URL;
+
+const falToken = process.env.FAL_TOKEN;
 
 const handler: NextApiHandler = async (request, response) => {
   if (request.method !== "POST" && request.method !== "OPTIONS") {

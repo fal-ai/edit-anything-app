@@ -1,15 +1,7 @@
+import { ImageFile } from "@/data/image";
 import { PhotoIcon } from "@heroicons/react/24/outline";
 import { useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-
-export interface ImageFile {
-  filename: string;
-  data: string;
-  size: {
-    width: number;
-    height: number;
-  };
-}
 
 type OnImageSelect = (image: ImageFile) => void;
 

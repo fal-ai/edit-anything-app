@@ -1,9 +1,6 @@
 import { PropsWithChildren } from "react";
 import NextImage from "next/image";
-import Card from "./Card";
-import EmptyMessage from "./EmptyMessage";
-import ImageMask from "./ImageMask";
-import { ImageFile } from "./ImageSelector";
+import { ImageFile } from "../data/image";
 
 export interface SingleImageResultProps {
   isLoading: boolean;
@@ -25,7 +22,7 @@ export default function SingleImageResult(
   return (
     <div>
       <button
-        className="btn btn-primary max-sm:btn-wide mb-4 md:mb-0"
+        className="btn btn-primary max-sm:btn-wide mb-10 md:mb-10"
         disabled={isLoading || !selectedImage}
         onClick={generateSingleImageResult}
       >

@@ -5,11 +5,11 @@ import FormData from "form-data";
 import * as fs from "fs";
 import axios from "axios";
 import type { NextApiHandler, PageConfig } from "next";
+import { base64ToFile } from "@/util";
 
-const REMBG_URL =
-  process.env.REMBG_URL || "https://103961668-rembg.gateway.alpha.fal.ai";
+const REMBG_URL = process.env.NEXT_PUBLIC_REMBG_URL;
 
-const falToken = process.env.falToken;
+const falToken = process.env.FAL_TOKEN;
 
 const handler: NextApiHandler = async (request, response) => {
   if (request.method !== "POST" && request.method !== "OPTIONS") {
@@ -38,11 +38,4 @@ const handler: NextApiHandler = async (request, response) => {
     .catch((error) => console.error(error));
 };
 
-function base64ToFile(dataurl: string, filename: string) {
-  // Extract the base64 data portion
-  let base64Data = dataurl.split(",")[1];
-
-  // Write the base64 string to a file
-  fs.writeFileSync(filename, base64Data, { encoding: "base64" });
-}
 export default handler;
