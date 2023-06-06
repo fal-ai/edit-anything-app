@@ -18,6 +18,7 @@
     "@types/react-dom": "18.0.11",
     "@types/uuid": "^9.0.1",
     "@types/yauzl": "^2.10.0",
+    "@vercel/analytics": "^1.0.1",
     "@vercel/kv": "^0.1.2",
     "autoprefixer": "10.4.14",
     "axios": "^1.4.0",
