@@ -40,7 +40,7 @@ const Home = () => {
   const [number, setNumber] = useState(0);
   const [dilation, setDilation] = useState(0);
   const [activeTab, setActiveTab] = useState("replace");
-  const [selectedModel, setSelectedModel] = useState<Model>(models["rembg"]);
+  const [selectedModel, setSelectedModel] = useState<Model>(models["sam"]);
   const [singleImageResultUrl, setSingleImageResultUrl] = useState<
     string | null
   >(null);
@@ -59,7 +59,7 @@ const Home = () => {
     setReplacedImageUrls([]);
     setRemovedImageUrls([]);
     setLoading(false);
-    setSelectedModel(models["rembg"]);
+    setSelectedModel(models["sam"]);
     setSingleImageResultUrl(null);
     setScriblePaused(false);
     setModelCardHidden(true);
