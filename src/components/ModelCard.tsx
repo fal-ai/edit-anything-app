@@ -3,6 +3,7 @@ import Card from "./Card";
 import { Model } from "../data/modelMetadata";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import GitHubIcon from "./GitHubIcon";
+import va from "@vercel/analytics";
 
 export interface ModelPickerProps {
   model: Model;
@@ -17,6 +18,7 @@ export default function ModelCard(props: PropsWithChildren<ModelPickerProps>) {
   const modelCardHiddenClass = props.modelCardHidden ? "hidden" : "";
 
   const onClick = () => {
+    va.track("show-code-toggle");
     props.setModelCardHidden(!props.modelCardHidden);
   };
 
@@ -53,6 +55,9 @@ export default function ModelCard(props: PropsWithChildren<ModelPickerProps>) {
               className="btn btn-active mb-10 mt-5"
               href="https://serverless.fal.ai/api/auth/login"
               target="_blank"
+              onClick={() => {
+                va.track("github-login");
+              }}
             >
               <GitHubIcon />{" "}
               <span className="ms-3"> Sign in with Github to get a token </span>
