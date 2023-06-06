@@ -30,7 +30,7 @@ export default function ModelPicker(
           className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52"
         >
           {Object.values(models).map((model) => (
-            <li onClick={() => handleMaskClick(model.id)}>
+            <li key={model.id} onClick={() => handleMaskClick(model.id)}>
               <a>{model.name}</a>
             </li>
           ))}
