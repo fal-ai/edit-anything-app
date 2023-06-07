@@ -15,7 +15,7 @@ export const StableDiffusionOptionsButtonGroup = (
     props.activeTab === tabName ? "btn-primary" : "";
 
   return (
-    <div className="flex container mx-auto pt-8 w-full">
+    <div className="max-md:px-2 flex container mx-auto pt-8 w-full">
       <div className="join">
         <button
           onClick={() => setActiveTab("replace")}

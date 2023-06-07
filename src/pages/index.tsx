@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 import Card from "@/components/Card";
 import ErrorNotification from "@/components/ErrorNotification";
-import ImageCountDisplay from "@/components/ImageCountDisplay";
 import ImageSelector from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
 import MaskPicker from "@/components/MaskPicker";
@@ -277,17 +276,14 @@ const Home = () => {
       <Head>
         <title>Edit Anything | fal-serverless</title>
       </Head>
-      <div>
-        <ImageCountDisplay count={number} />
-      </div>
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-        <div className="md:display md:col-span-2 flex items-end">
+        <div className="max-md:px-2 md:display md:col-span-2 flex items-end">
           <ModelPicker
             onSelect={handleModelSelected}
             selectedModel={selectedModel}
           />
         </div>
-        <div className="md:display flex items-end justify-end">
+        <div className="hidden md:flex items-end justify-end">
           <button
             className="btn btn-outline"
             onClick={() => setShowModelDetails(true)}

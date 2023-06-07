@@ -1,6 +1,15 @@
-import { DocumentDuplicateIcon as CopyIcon, InformationCircleIcon as InfoIcon } from "@heroicons/react/24/outline";
+import {
+  DocumentDuplicateIcon as CopyIcon,
+  InformationCircleIcon as InfoIcon,
+} from "@heroicons/react/24/outline";
 import va from "@vercel/analytics";
-import { PropsWithChildren, useCallback, useEffect, useState } from "react";
+import {
+  PropsWithChildren,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { Model } from "../data/modelMetadata";
 import GitHubIcon from "./GitHubIcon";
@@ -11,8 +20,14 @@ export interface ModelCardProps {
   model: Model;
 }
 
+type Tabs = "python" | "js" | "curl";
+
 export default function ModelCard(props: PropsWithChildren<ModelCardProps>) {
   const { model, onDismiss, visible } = props;
+  const [activeTab, setActiveTab] = useState<Tabs>("python");
+  const selectTab = (tab: Tabs) => () => {
+    setActiveTab(tab);
+  };
   const [style, setStyle] = useState({});
   useEffect(() => {
     import("react-syntax-highlighter/dist/esm/styles/prism/material-dark").then(
@@ -20,7 +35,10 @@ export default function ModelCard(props: PropsWithChildren<ModelCardProps>) {
     );
   });
 
-  const modalClassName = ["modal", visible ? "modal-open" : ""];
+  const modalClassName = [
+    "modal max-md:w-full max-md:modal-bottom",
+    visible ? "modal-open" : "",
+  ];
   const copyEndpoint = useCallback(() => {
     navigator.clipboard.writeText(model.apiEndpoint);
   }, [model.apiEndpoint]);
@@ -31,6 +49,23 @@ export default function ModelCard(props: PropsWithChildren<ModelCardProps>) {
     },
     []
   );
+  const isTabSelected = useCallback(
+    (tab: Tabs) => {
+      return activeTab === tab ? "tab-active" : "";
+    },
+    [activeTab]
+  );
+
+  const code = useMemo(() => {
+    switch (activeTab) {
+      case "python":
+        return model.pythonCode;
+      case "js":
+        return model.jsCode;
+      case "curl":
+        return model.curlCode;
+    }
+  }, [activeTab, model]);
 
   return (
     <dialog className={modalClassName.join(" ")}>
@@ -59,11 +94,13 @@ export default function ModelCard(props: PropsWithChildren<ModelCardProps>) {
             <div className="rounded-md bg-base-200 border border-base-content/10 p-4 my-6">
               <p className="text-lg font-bold space-x-2">
                 <InfoIcon className="stroke-info w-8 h-8 inline-block" />
-                <span className="text-info-content dark:text-info">You can call this API right now!</span>
+                <span className="text-info-content dark:text-info">
+                  You can call this API right now!
+                </span>
               </p>
               <p>
-                You can test this API in your application. All you need
-                to do is to sign in and get a token.
+                You can use this model in your application through our API. All
+                you need to do is to sign in and get a token.
               </p>
               <div className="text-center">
                 <a
@@ -83,12 +120,34 @@ export default function ModelCard(props: PropsWithChildren<ModelCardProps>) {
               </div>
             </div>
           </div>
+        </div>
+        <div>
+          <div className="tabs w-full text-lg">
+            <a
+              className={`tab tab-lifted ${isTabSelected("python")}`}
+              onClick={selectTab("python")}
+            >
+              Python
+            </a>
+            <a
+              className={`tab tab-lifted ${isTabSelected("js")}`}
+              onClick={selectTab("js")}
+            >
+              JavaScript
+            </a>
+            <a
+              className={`tab tab-lifted ${isTabSelected("curl")}`}
+              onClick={selectTab("curl")}
+            >
+              cURL
+            </a>
+          </div>
           <SyntaxHighlighter
-            text={model.pythonCode}
-            language={"python"}
+            text={code.trim()}
+            language={activeTab}
             style={style}
           >
-            {model.pythonCode}
+            {code.trim()}
           </SyntaxHighlighter>
         </div>
         <div className="modal-action">

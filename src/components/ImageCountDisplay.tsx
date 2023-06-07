@@ -6,7 +6,7 @@ export interface ImageCountDisplayProps {
 
 export default function EmptyMessage(props: ImageCountDisplayProps) {
   return (
-    <div className="text-center font-light prose prose-slate max-w-full my-4 md:my-8">
+    <div className="text-center font-light prose prose-slate max-w-full my-2 md:my-4">
       <p>
         {props.count > 0 ? (
           <div>

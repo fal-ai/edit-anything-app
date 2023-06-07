@@ -4,6 +4,7 @@ export type Model = {
   apiEndpoint: string;
   pythonCode: string;
   jsCode: string;
+  curlCode: string;
 };
 
 const regmbModel: Model = {
@@ -22,6 +23,7 @@ rembg_response = requests.post(
 )
     `,
   jsCode: "",
+  curlCode: "",
 };
 
 const segmentAnything: Model = {
@@ -31,7 +33,7 @@ const segmentAnything: Model = {
   pythonCode: `
 import requests
 
-sam_base_url = "${process.env.NEXT_PUBLIC_MASK_FUNCTION_URL}" 
+sam_base_url = "${process.env.NEXT_PUBLIC_MASK_FUNCTION_URL}"
 fal_token = "<YOUR_TOKEN_HERE>"
 sam_response = requests.post(
     f"{sam_base_url}/masks",
@@ -40,6 +42,7 @@ sam_response = requests.post(
 )
 `,
   jsCode: "",
+  curlCode: "",
 };
 
 const controlnet: Model = {
@@ -62,6 +65,7 @@ response = requests.post(
 )
 `,
   jsCode: "",
+  curlCode: "",
 };
 
 type ModelRegistry = {
