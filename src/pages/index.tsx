@@ -1,3 +1,4 @@
+import { CodeBracketIcon } from "@heroicons/react/24/outline";
 import Head from "next/head";
 import { useEffect, useState } from "react";
 
@@ -45,7 +46,7 @@ const Home = () => {
     string | null
   >(null);
   const [scribblePaused, setScriblePaused] = useState(false);
-  const [modelCardHidden, setModelCardHidden] = useState(true);
+  const [showModelDetails, setShowModelDetails] = useState(false);
 
   const reset = () => {
     setStep(StepName.ChooseImage);
@@ -62,7 +63,7 @@ const Home = () => {
     setSelectedModel(models["sam"]);
     setSingleImageResultUrl(null);
     setScriblePaused(false);
-    setModelCardHidden(true);
+    setShowModelDetails(false);
   };
 
   useEffect(() => {
@@ -280,18 +281,20 @@ const Home = () => {
         <ImageCountDisplay count={number} />
       </div>
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-        <div className="md:display md:col-span-2">
+        <div className="md:display md:col-span-2 flex items-end">
           <ModelPicker
             onSelect={handleModelSelected}
             selectedModel={selectedModel}
           />
         </div>
-        <div className="md:display md:col-span-3">
-          <ModelCard
-            model={selectedModel}
-            modelCardHidden={modelCardHidden}
-            setModelCardHidden={setModelCardHidden}
-          />
+        <div className="md:display flex items-end justify-end">
+          <button
+            className="btn btn-outline"
+            onClick={() => setShowModelDetails(true)}
+          >
+            <CodeBracketIcon className="h-6 w-6" />
+            Show code
+          </button>
         </div>
         <div className="hidden md:display md:col-span-3">
           <Card>
@@ -392,6 +395,11 @@ const Home = () => {
           />
         )}
       </div>
+      <ModelCard
+        model={selectedModel}
+        onDismiss={() => setShowModelDetails(false)}
+        visible={showModelDetails}
+      />
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="alert max-w-md shadow-lg p-6 md:p-12 mx-4 md:mx-0">
