@@ -1,9 +1,9 @@
-import { PropsWithChildren, useEffect, useState } from "react";
-import Card from "./Card";
-import { Model } from "../data/modelMetadata";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import GitHubIcon from "./GitHubIcon";
 import va from "@vercel/analytics";
+import { PropsWithChildren, useEffect, useState } from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { Model } from "../data/modelMetadata";
+import Card from "./Card";
+import GitHubIcon from "./GitHubIcon";
 
 export interface ModelPickerProps {
   model: Model;

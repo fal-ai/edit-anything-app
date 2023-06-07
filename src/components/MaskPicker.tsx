@@ -1,9 +1,9 @@
+import { ImageFile } from "@/data/image";
+import { Model } from "@/data/modelMetadata";
 import { PropsWithChildren } from "react";
 import Card from "./Card";
 import EmptyMessage from "./EmptyMessage";
 import ImageMask from "./ImageMask";
-import { ImageFile } from "@/data/image";
-import { Model } from "@/data/modelMetadata";
 
 export interface MaskPickerProps {
   displayMasks: string[];

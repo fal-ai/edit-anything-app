@@ -1,4 +1,3 @@
-import { Model } from "@/data/modelMetadata";
 import { PropsWithChildren } from "react";
 
 export interface CardProps {

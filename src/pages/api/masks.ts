@@ -1,9 +1,7 @@
 import { incrementImageCount } from "@/data/storage";
-import type { NextApiHandler, PageConfig } from "next";
-import * as fs from "fs";
 import FormData from "form-data";
+import type { NextApiHandler, PageConfig } from "next";
 import fetch from "node-fetch";
-import { base64ToFile } from "@/util";
 
 const falToken = process.env.FAL_TOKEN;
 

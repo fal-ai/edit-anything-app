@@ -1,6 +1,6 @@
+import NextImage from "next/image";
 import Card from "./Card";
 import EmptyMessage from "./EmptyMessage";
-import NextImage from "next/image";
 
 interface StableDiffusionButtonGroupProps {
   setActiveTab: (tab: string) => void;

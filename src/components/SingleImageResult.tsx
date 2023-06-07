@@ -1,5 +1,5 @@
-import { PropsWithChildren } from "react";
 import NextImage from "next/image";
+import { PropsWithChildren } from "react";
 import { ImageFile } from "../data/image";
 
 export interface SingleImageResultProps {

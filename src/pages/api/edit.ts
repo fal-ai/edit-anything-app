@@ -1,10 +1,7 @@
 import { incrementImageCount } from "@/data/storage";
-import { base64ToFile } from "@/util";
-import type { NextApiHandler } from "next";
-import * as fs from "fs";
 import FormData from "form-data";
+import type { NextApiHandler } from "next";
 import fetch from "node-fetch";
-import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
 const EDIT_FUNCTION_URL = process.env.NEXT_PUBLIC_EDIT_FUNCTION_URL;
