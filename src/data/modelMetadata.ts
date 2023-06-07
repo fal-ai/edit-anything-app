@@ -13,7 +13,7 @@ const regmbModel: Model = {
   pythonCode: `
 import requests
 
-rembg_base_url = ${process.env.NEXT_PUBLIC_REMBG_URL}
+rembg_base_url = "${process.env.NEXT_PUBLIC_REMBG_URL}"
 fal_token = "<YOUR_TOKEN_HERE>"
 rembg_response = requests.post(
     f"{rembg_base_url}/remove",

@@ -1,6 +1,7 @@
 import { incrementImageCount } from "@/data/storage";
-import fetch from "cross-fetch";
+import fetch from "node-fetch";
 import type { NextApiHandler } from "next";
+import FormData from "form-data";
 
 const FILL_FUNCTION_URL = process.env.NEXT_PUBLIC_FILL_FUNCTION_URL;
 
@@ -16,22 +17,35 @@ const handler: NextApiHandler = async (request, response) => {
     return;
   }
 
+  const maskFileBuffer = convertImageUrlToBuffer(request.body.mask_url);
+
+  let base64ImageWithoutPrefix = request.body.image_url.data
+    .split(";base64,")
+    .pop();
+
+  const formData = new FormData();
+  formData.append(
+    "image_file",
+    Buffer.from(base64ImageWithoutPrefix, "base64"),
+    "image_file.png"
+  );
+  formData.append("mask_file", maskFileBuffer, "mask_file.png");
+  formData.append("fal_token", falToken);
+  formData.append("prompt", request.body.prompt);
+
   const res = await fetch(FILL_FUNCTION_URL, {
     method: "POST",
-    body: JSON.stringify(request.body),
-    headers: {
-      "content-type": "application/json",
-      "x-fal-key-id": process.env.FAL_KEY_ID ?? "",
-      "x-fal-key-secret": process.env.FAL_KEY_SECRET ?? "",
-    },
+    body: formData,
   });
   if (!res.ok) {
     response.status(res.status).send(res.statusText);
     return;
   }
   await incrementImageCount();
-  const { result } = await res.json();
-  response.json(result);
+  response.json(await res.json());
 };
 
 export default handler;
+function convertImageUrlToBuffer(mask_url: any) {
+  throw new Error("Function not implemented.");
+}

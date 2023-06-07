@@ -23,15 +23,24 @@ const handler: NextApiHandler = async (request, response) => {
 
   const uuid = uuidv4();
 
-  convertImageUrlToFile(request.body.mask_url, `mask_file_${uuid}.png`);
-  base64ToFile(request.body.image_url.data, `image_file_${uuid}.png`);
+  const maskFileBuffer = await convertImageUrlToBuffer(request.body.mask_url);
+
+  let base64ImageWithoutPrefix = request.body.image_url.data
+    .split(";base64,")
+    .pop();
 
   const formData = new FormData();
-  formData.append("image_file", fs.createReadStream(`mask_file_${uuid}.png`));
-  formData.append("mask_file", fs.createReadStream(`image_file_${uuid}.png`));
+
+  formData.append(
+    "image_file",
+    Buffer.from(base64ImageWithoutPrefix, "base64"),
+    "image_file.png"
+  );
+  formData.append("mask_file", maskFileBuffer, "mask_file.png");
 
   formData.append("fal_token", falToken);
   formData.append("prompt", request.body.prompt);
+
   const res = await fetch(EDIT_FUNCTION_URL, {
     method: "POST",
     body: formData,
@@ -44,18 +53,15 @@ const handler: NextApiHandler = async (request, response) => {
   response.json(await res.json());
 };
 
-async function convertImageUrlToFile(
-  imageUrl: string,
-  filePath: string
-): Promise<string | null> {
+async function convertImageUrlToBuffer(
+  imageUrl: string
+): Promise<Buffer | null> {
   try {
     const response = await fetch(imageUrl);
     if (!response.ok) {
       throw new Error("Failed to download the image");
     }
-    const buffer = await response.buffer();
-    fs.writeFileSync(filePath, buffer);
-    return path.resolve(filePath);
+    return await response.buffer();
   } catch (error) {
     console.error("Failed to convert image URL to file:", error);
     return null;

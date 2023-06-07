@@ -1,11 +1,9 @@
-import fetch from "cross-fetch";
+import fetch from "node-fetch";
 import { incrementImageCount } from "@/data/storage";
 
 import FormData from "form-data";
-import * as fs from "fs";
-import axios from "axios";
 import type { NextApiHandler, PageConfig } from "next";
-import { base64ToFile } from "@/util";
+import axios from "axios";
 
 const REMBG_URL = process.env.NEXT_PUBLIC_REMBG_URL;
 
@@ -21,9 +19,16 @@ const handler: NextApiHandler = async (request, response) => {
     return;
   }
   // save file
-  base64ToFile(request.body.base64Image, "base.png");
+  let base64ImageWithoutPrefix = request.body.base64Image
+    .split(";base64,")
+    .pop();
+
   let formData = new FormData();
-  formData.append("file", fs.createReadStream("base.png"));
+  formData.append(
+    "file",
+    Buffer.from(base64ImageWithoutPrefix, "base64"),
+    "anything.png"
+  );
   formData.append("fal_token", falToken);
 
   axios
@@ -31,7 +36,7 @@ const handler: NextApiHandler = async (request, response) => {
     .then(async (res) => {
       if (res.status == 200) {
         await incrementImageCount({ by: 1 });
-
+        const result = await res.data;
         response.status(res.status).send({ imageUrl: res.data });
       }
     })

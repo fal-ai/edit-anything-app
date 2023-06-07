@@ -17,11 +17,16 @@ const handler: NextApiHandler = async (request, response) => {
     response.status(500).json({ message: "MASK_FUNCTION_URL not set" });
     return;
   }
+  let base64ImageWithoutPrefix = request.body.image.split(";base64,").pop();
 
-  base64ToFile(request.body.image, "base.png");
   const formData = new FormData();
-  formData.append("file", fs.createReadStream("base.png"));
-  formData.append("fal_token", "123");
+  formData.append(
+    "file",
+    Buffer.from(base64ImageWithoutPrefix, "base64"),
+    "base.png"
+  );
+
+  formData.append("fal_token", falToken);
   formData.append("x", request.body.x);
   formData.append("y", request.body.y);
   formData.append("extension", request.body.extension);
