@@ -241,9 +241,9 @@ const Home = () => {
     }
   };
 
-  const handleModelSelected = (model_id: string) => {
-    va.track("model-selected-" + model_id);
-    setSelectedModel(models[model_id]);
+  const handleModelSelected = (modelId: string) => {
+    va.track("model-selected-" + modelId);
+    setSelectedModel(models[modelId]);
     setSelectedImage(null);
   };
 
@@ -288,7 +288,7 @@ const Home = () => {
         </div>
         <div className="md:display md:col-span-3">
           <ModelCard
-            model={selectedModel || models["rembg"]}
+            model={selectedModel}
             modelCardHidden={modelCardHidden}
             setModelCardHidden={setModelCardHidden}
           />

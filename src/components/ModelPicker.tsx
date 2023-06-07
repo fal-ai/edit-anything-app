@@ -18,9 +18,12 @@ export default function ModelPicker(
     [onSelect]
   );
   return (
-    <div>
+    <div className="form-control">
+      <label className="label">
+        <span className="label-text">Select a model</span>
+      </label>
       <select
-        className="select select-bordered"
+        className="select select-bordered max-w-xs"
         onChange={handleOnModelSelect}
         value={selectedModel.id}
       >
