@@ -6,15 +6,15 @@ import ErrorNotification from "@/components/ErrorNotification";
 import ImageCountDisplay from "@/components/ImageCountDisplay";
 import ImageSelector from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
-import Steps, { StepName } from "@/components/Steps";
 import MaskPicker from "@/components/MaskPicker";
-import ModelPicker from "@/components/ModelPicker";
 import ModelCard from "@/components/ModelCard";
-import { Model, models } from "@/data/modelMetadata";
-import SingleImageResult from "@/components/SingleImageResult";
+import ModelPicker from "@/components/ModelPicker";
 import ScribbleBox from "@/components/ScribbleBox";
-import { ImageFile } from "@/data/image";
+import SingleImageResult from "@/components/SingleImageResult";
 import { StableDiffusionInput } from "@/components/StableDiffusion";
+import Steps, { StepName } from "@/components/Steps";
+import { ImageFile } from "@/data/image";
+import { Model, models } from "@/data/modelMetadata";
 import va from "@vercel/analytics";
 
 type ErrorMessage = {
@@ -282,7 +282,7 @@ const Home = () => {
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
         <div className="md:display md:col-span-2">
           <ModelPicker
-            onClick={handleModelSelected}
+            onSelect={handleModelSelected}
             selectedModel={selectedModel}
           />
         </div>
