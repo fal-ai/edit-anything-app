@@ -1,9 +1,8 @@
-import fetch from "node-fetch";
 import { incrementImageCount } from "@/data/storage";
 
-import FormData from "form-data";
-import type { NextApiHandler, PageConfig } from "next";
 import axios from "axios";
+import FormData from "form-data";
+import type { NextApiHandler } from "next";
 
 const REMBG_URL = process.env.NEXT_PUBLIC_REMBG_URL;
 

@@ -1,6 +1,6 @@
+import * as React from "react";
 import { PropsWithChildren } from "react";
 import { ReactSketchCanvas } from "react-sketch-canvas";
-import * as React from "react";
 
 export interface ScribbleBoxProps {
   handleScrible: (data: any) => void;

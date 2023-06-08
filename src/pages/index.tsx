@@ -1,3 +1,4 @@
+import { CodeBracketIcon } from "@heroicons/react/24/outline";
 import Head from "next/head";
 import { useEffect, useState } from "react";
 
@@ -6,15 +7,15 @@ import ErrorNotification from "@/components/ErrorNotification";
 import ImageCountDisplay from "@/components/ImageCountDisplay";
 import ImageSelector from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
-import Steps, { StepName } from "@/components/Steps";
 import MaskPicker from "@/components/MaskPicker";
-import ModelPicker from "@/components/ModelPicker";
 import ModelCard from "@/components/ModelCard";
-import { Model, models } from "@/data/modelMetadata";
-import SingleImageResult from "@/components/SingleImageResult";
+import ModelPicker from "@/components/ModelPicker";
 import ScribbleBox from "@/components/ScribbleBox";
-import { ImageFile } from "@/data/image";
+import SingleImageResult from "@/components/SingleImageResult";
 import { StableDiffusionInput } from "@/components/StableDiffusion";
+import Steps, { StepName } from "@/components/Steps";
+import { ImageFile } from "@/data/image";
+import { Model, models } from "@/data/modelMetadata";
 import va from "@vercel/analytics";
 
 type ErrorMessage = {
@@ -31,13 +32,16 @@ const Home = () => {
   const [masks, setMasks] = useState<string[]>([]);
   const [displayMasks, setDisplayMasks] = useState<string[]>([]);
   const [selectedMask, setSelectedMask] = useState<string | null>(null);
+  const [selectedDisplayMask, setSelectedDisplayMask] = useState<string | null>(
+    null
+  );
   const [prompt, setPrompt] = useState("");
   const [fillPrompt, setFillPrompt] = useState("");
   const [replacedImageUrls, setReplacedImageUrls] = useState<string[]>([]);
   const [removedImageUrls, setRemovedImageUrls] = useState<string[]>([]);
   const [filledImageUrls, setFilledImageUrls] = useState<string[]>([]);
   const [isLoading, setLoading] = useState(false);
-  const [number, setNumber] = useState(0);
+  const [imageCount, setImageCount] = useState(0);
   const [dilation, setDilation] = useState(0);
   const [activeTab, setActiveTab] = useState("replace");
   const [selectedModel, setSelectedModel] = useState<Model>(models["sam"]);
@@ -45,7 +49,7 @@ const Home = () => {
     string | null
   >(null);
   const [scribblePaused, setScriblePaused] = useState(false);
-  const [modelCardHidden, setModelCardHidden] = useState(true);
+  const [showModelDetails, setShowModelDetails] = useState(false);
 
   const reset = () => {
     setStep(StepName.ChooseImage);
@@ -62,15 +66,15 @@ const Home = () => {
     setSelectedModel(models["sam"]);
     setSingleImageResultUrl(null);
     setScriblePaused(false);
-    setModelCardHidden(true);
+    setShowModelDetails(false);
   };
 
   useEffect(() => {
     setError(null);
     getNumberOfImages().then((data) => {
-      setNumber(data["numberOfImages"]);
+      setImageCount(data["numberOfImages"]);
     });
-  }, [step, selectedImage, position, selectedMask, number]);
+  }, [step, selectedImage, position, selectedMask, imageCount]);
 
   const dismissError = () => {
     setError(null);
@@ -156,6 +160,7 @@ const Home = () => {
   const handleMaskSelected = (mask: string) => {
     // TODO: find mask index in a better way
     const index = displayMasks.indexOf(mask);
+    setSelectedDisplayMask(mask);
     setSelectedMask(masks[index]);
     setStep(StepName.DefinePrompt);
   };
@@ -241,9 +246,9 @@ const Home = () => {
     }
   };
 
-  const handleModelSelected = (model_id: string) => {
-    va.track("model-selected-" + model_id);
-    setSelectedModel(models[model_id]);
+  const handleModelSelected = (modelId: string) => {
+    va.track("model-selected-" + modelId);
+    setSelectedModel(models[modelId]);
     setSelectedImage(null);
   };
 
@@ -276,22 +281,21 @@ const Home = () => {
       <Head>
         <title>Edit Anything | fal-serverless</title>
       </Head>
-      <div>
-        <ImageCountDisplay count={number} />
-      </div>
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-        <div className="md:display md:col-span-2">
+        <div className="max-md:px-2 md:display md:col-span-2 flex items-end">
           <ModelPicker
-            onClick={handleModelSelected}
+            onSelect={handleModelSelected}
             selectedModel={selectedModel}
           />
         </div>
-        <div className="md:display md:col-span-3">
-          <ModelCard
-            model={selectedModel || models["rembg"]}
-            modelCardHidden={modelCardHidden}
-            setModelCardHidden={setModelCardHidden}
-          />
+        <div className="hidden md:flex items-end justify-end">
+          <button
+            className="btn btn-outline"
+            onClick={() => setShowModelDetails(true)}
+          >
+            <CodeBracketIcon className="h-6 w-6" />
+            Show code
+          </button>
         </div>
         <div className="hidden md:display md:col-span-3">
           <Card>
@@ -364,7 +368,7 @@ const Home = () => {
               selectedImage={selectedImage}
               position={position}
               generateMasks={generateMasks}
-              selectedMask={selectedMask}
+              selectedMask={selectedDisplayMask}
               handleMaskSelected={handleMaskSelected}
             />
           )}
@@ -392,6 +396,12 @@ const Home = () => {
           />
         )}
       </div>
+      <ImageCountDisplay count={imageCount} />
+      <ModelCard
+        model={selectedModel}
+        onDismiss={() => setShowModelDetails(false)}
+        visible={showModelDetails}
+      />
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="alert max-w-md shadow-lg p-6 md:p-12 mx-4 md:mx-0">

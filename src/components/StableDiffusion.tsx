@@ -1,6 +1,6 @@
+import NextImage from "next/image";
 import Card from "./Card";
 import EmptyMessage from "./EmptyMessage";
-import NextImage from "next/image";
 
 interface StableDiffusionButtonGroupProps {
   setActiveTab: (tab: string) => void;
@@ -12,28 +12,30 @@ export const StableDiffusionOptionsButtonGroup = (
 ) => {
   const { setActiveTab, activeTab } = props;
   const tabClass = (tabName: string) =>
-    props.activeTab === tabName ? "btn btn-primary" : "btn";
+    props.activeTab === tabName ? "btn-primary" : "";
 
   return (
-    <div className="flex container mx-auto pt-8 w-full">
-      <button
-        onClick={() => setActiveTab("replace")}
-        className={`btn ${tabClass("replace")} mx-2`}
-      >
-        Replace
-      </button>
-      <button
-        onClick={() => setActiveTab("remove")}
-        className={`btn ${tabClass("remove")} mx-2`}
-      >
-        Remove
-      </button>
-      <button
-        onClick={() => setActiveTab("fill")}
-        className={`btn ${tabClass("fill")} mx-2`}
-      >
-        Fill
-      </button>
+    <div className="max-md:px-2 flex container mx-auto pt-8 w-full">
+      <div className="join">
+        <button
+          onClick={() => setActiveTab("replace")}
+          className={`btn ${tabClass("replace")} join-item`}
+        >
+          Replace
+        </button>
+        <button
+          onClick={() => setActiveTab("remove")}
+          className={`btn ${tabClass("remove")} join-item`}
+        >
+          Remove
+        </button>
+        <button
+          onClick={() => setActiveTab("fill")}
+          className={`btn ${tabClass("fill")} join-item`}
+        >
+          Fill
+        </button>
+      </div>
     </div>
   );
 };

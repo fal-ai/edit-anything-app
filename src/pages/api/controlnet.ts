@@ -1,9 +1,8 @@
-import fetch from "cross-fetch";
 import { incrementImageCount } from "@/data/storage";
 
+import axios from "axios";
 import FormData from "form-data";
 import * as fs from "fs";
-import axios from "axios";
 import type { NextApiHandler } from "next";
 import { v4 as uuidv4 } from "uuid";
 

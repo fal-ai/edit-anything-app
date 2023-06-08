@@ -1,7 +1,7 @@
 import { incrementImageCount } from "@/data/storage";
-import fetch from "node-fetch";
-import type { NextApiHandler } from "next";
 import FormData from "form-data";
+import type { NextApiHandler } from "next";
+import fetch from "node-fetch";
 
 const FILL_FUNCTION_URL = process.env.NEXT_PUBLIC_FILL_FUNCTION_URL;
 

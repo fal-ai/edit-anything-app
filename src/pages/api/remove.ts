@@ -1,7 +1,7 @@
 import { incrementImageCount } from "@/data/storage";
 import FormData from "form-data";
-import fetch from "node-fetch";
 import type { NextApiHandler } from "next";
+import fetch from "node-fetch";
 
 const REMOVE_FUNCTION_URL = process.env.NEXT_PUBLIC_REMOVE_FUNCTION_URL;
 
