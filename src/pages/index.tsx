@@ -32,6 +32,9 @@ const Home = () => {
   const [masks, setMasks] = useState<string[]>([]);
   const [displayMasks, setDisplayMasks] = useState<string[]>([]);
   const [selectedMask, setSelectedMask] = useState<string | null>(null);
+  const [selectedDisplayMask, setSelectedDisplayMask] = useState<string | null>(
+    null
+  );
   const [prompt, setPrompt] = useState("");
   const [fillPrompt, setFillPrompt] = useState("");
   const [replacedImageUrls, setReplacedImageUrls] = useState<string[]>([]);
@@ -157,6 +160,7 @@ const Home = () => {
   const handleMaskSelected = (mask: string) => {
     // TODO: find mask index in a better way
     const index = displayMasks.indexOf(mask);
+    setSelectedDisplayMask(mask);
     setSelectedMask(masks[index]);
     setStep(StepName.DefinePrompt);
   };
@@ -364,7 +368,7 @@ const Home = () => {
               selectedImage={selectedImage}
               position={position}
               generateMasks={generateMasks}
-              selectedMask={selectedMask}
+              selectedMask={selectedDisplayMask}
               handleMaskSelected={handleMaskSelected}
             />
           )}
