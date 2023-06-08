@@ -4,15 +4,18 @@ export interface ImageCountDisplayProps {
   count: number;
 }
 
-export default function EmptyMessage(props: ImageCountDisplayProps) {
+export default function ImageCountDisplay(props: ImageCountDisplayProps) {
   return (
-    <div className="text-center font-light prose prose-slate max-w-full my-2 md:my-4">
+    <div className="text-center font-light prose prose-slate max-w-full mt-4 md:mt-12">
       <p>
         {props.count > 0 ? (
-          <div>
-            Number of Images Created:{" "}
-            <CountUp start={props.count - 5} end={props.count} />
-          </div>
+          <>
+            A total of{" "}
+            <strong>
+              <CountUp start={props.count - 5} end={props.count} /> images{" "}
+            </strong>
+            created, and counting!
+          </>
         ) : (
           ""
         )}

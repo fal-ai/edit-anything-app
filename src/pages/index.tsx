@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import Card from "@/components/Card";
 import ErrorNotification from "@/components/ErrorNotification";
+import ImageCountDisplay from "@/components/ImageCountDisplay";
 import ImageSelector from "@/components/ImageSelector";
 import ImageSpot, { ImageSpotPosition } from "@/components/ImageSpot";
 import MaskPicker from "@/components/MaskPicker";
@@ -37,7 +38,7 @@ const Home = () => {
   const [removedImageUrls, setRemovedImageUrls] = useState<string[]>([]);
   const [filledImageUrls, setFilledImageUrls] = useState<string[]>([]);
   const [isLoading, setLoading] = useState(false);
-  const [number, setNumber] = useState(0);
+  const [imageCount, setImageCount] = useState(0);
   const [dilation, setDilation] = useState(0);
   const [activeTab, setActiveTab] = useState("replace");
   const [selectedModel, setSelectedModel] = useState<Model>(models["sam"]);
@@ -68,9 +69,9 @@ const Home = () => {
   useEffect(() => {
     setError(null);
     getNumberOfImages().then((data) => {
-      setNumber(data["numberOfImages"]);
+      setImageCount(data["numberOfImages"]);
     });
-  }, [step, selectedImage, position, selectedMask, number]);
+  }, [step, selectedImage, position, selectedMask, imageCount]);
 
   const dismissError = () => {
     setError(null);
@@ -391,6 +392,7 @@ const Home = () => {
           />
         )}
       </div>
+      <ImageCountDisplay count={imageCount} />
       <ModelCard
         model={selectedModel}
         onDismiss={() => setShowModelDetails(false)}
