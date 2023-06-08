@@ -1,8 +1,6 @@
 import { incrementImageCount } from "@/data/storage";
-
-import axios from "axios";
+import fetch from "node-fetch";
 import FormData from "form-data";
-import * as fs from "fs";
 import type { NextApiHandler } from "next";
 import { v4 as uuidv4 } from "uuid";
 
@@ -21,30 +19,27 @@ const handler: NextApiHandler = async (request, response) => {
   }
   // save file
   const uuid = uuidv4();
-  base64ToFile(request.body.base64Image, `base_${uuid}.png`);
+
   let formData = new FormData();
-  formData.append("file", fs.createReadStream(`base_${uuid}.png`));
+  formData.append(
+    "file",
+    Buffer.from(request.body.base64Image, "base64"),
+    `base_${uuid}.png`
+  );
   // TODO: these need to change
   formData.append("fal_token", falToken);
-  formData.append("num_samples", request.body.num_samples);
   formData.append("prompt", request.body.prompt);
 
-  axios
-    .post(`${CONTROLNET_URL}/generate`, formData)
-    .then(async (res) => {
-      if (res.status == 200) {
-        await incrementImageCount({ by: 1 });
-        response.status(res.status).send({ imageUrl: res.data[0] });
-      }
-    })
-    .catch((error) => console.error(error));
+  const res = await fetch(CONTROLNET_URL, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    response.status(res.status).send(res.statusText);
+    return;
+  }
+  await incrementImageCount();
+  response.json(await res.json());
 };
 
-function base64ToFile(dataurl: string, filename: string) {
-  // Extract the base64 data portion
-  let base64Data = dataurl.split(",")[1];
-
-  // Write the base64 string to a file
-  fs.writeFileSync(filename, base64Data, { encoding: "base64" });
-}
 export default handler;
