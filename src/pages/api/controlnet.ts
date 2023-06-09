@@ -14,32 +14,37 @@ const handler: NextApiHandler = async (request, response) => {
     return;
   }
   if (!CONTROLNET_URL) {
-    response.status(500).json({ message: "REMBG_URL not set" });
+    response.status(500).json({ message: "CONTROLNET_URL not set" });
     return;
   }
   // save file
   const uuid = uuidv4();
+  let base64ImageWithoutPrefix = request.body.base64Image
+    .split(";base64,")
+    .pop();
 
   let formData = new FormData();
   formData.append(
     "file",
-    Buffer.from(request.body.base64Image, "base64"),
+    Buffer.from(base64ImageWithoutPrefix, "base64"),
     `base_${uuid}.png`
   );
   // TODO: these need to change
   formData.append("fal_token", falToken);
+  formData.append("num_samples", "1");
   formData.append("prompt", request.body.prompt);
-
   const res = await fetch(CONTROLNET_URL, {
     method: "POST",
     body: formData,
   });
   if (!res.ok) {
+    console.log(res.status);
     response.status(res.status).send(res.statusText);
     return;
   }
   await incrementImageCount();
-  response.json(await res.json());
+  const data: any = await res.json();
+  response.json({ imageUrl: data[0] });
 };
 
 export default handler;
