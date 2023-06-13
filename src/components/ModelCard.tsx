@@ -102,6 +102,11 @@ export default function ModelCard(props: PropsWithChildren<ModelCardProps>) {
                 You can use this model in your application through our API. All
                 you need to do is to sign in and get a token.
               </p>
+              <p>
+                <a href="https://youtu.be/jV6cP0PyRY0">
+                  Watch this tutorial to help you get started!
+                </a>
+              </p>
               <div className="text-center">
                 <a
                   className="btn btn-outline btn-active"
